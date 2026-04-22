@@ -1,0 +1,298 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{hyperref}
+
+\geometry{margin=2.2cm}
+
+\title{IISVersion7 и оператор Sumigron}
+\author{Проект анализа интегрального индекса состояния}
+\date{\today}
+
+\newcommand{\sgsumintright}[1]{\mathop{\mathchoice
+  {\ooalign{
+    \hfil$\displaystyle\sum$\hfil\cr
+    \hfil$\displaystyle\int$\hfil\cr
+    \hidewidth\raisebox{-1.35ex}{\kern1.25ex$\scriptstyle #1$}\hidewidth\cr
+  }}
+  {\ooalign{
+    \hfil$\textstyle\sum$\hfil\cr
+    \hfil$\textstyle\int$\hfil\cr
+    \hidewidth\raisebox{-1.00ex}{\kern1.00ex$\scriptscriptstyle #1$}\hidewidth\cr
+  }}
+  {\ooalign{
+    \hfil$\scriptstyle\sum$\hfil\cr
+    \hfil$\scriptstyle\int$\hfil\cr
+    \hidewidth\raisebox{-0.75ex}{\kern0.75ex$\scriptscriptstyle #1$}\hidewidth\cr
+  }}
+  {\ooalign{
+    \hfil$\scriptscriptstyle\sum$\hfil\cr
+    \hfil$\scriptscriptstyle\int$\hfil\cr
+    \hidewidth\raisebox{-0.60ex}{\kern0.55ex$\scriptscriptstyle #1$}\hidewidth\cr
+  }}
+}}
+
+\newcommand{\sgop}{\sgsumintright{\bowtie}}
+\newcommand{\sigmoid}{\sigma}
+
+\begin{document}
+\maketitle
+
+\section{Назначение версии V7}
+IISVersion7 вводится как следующая теоретическая версия после V5 и V6.
+Её главная идея состоит в том, чтобы:
+\begin{itemize}[leftmargin=1.25cm]
+    \item не сжимать окно сигнала слишком рано одной ограниченной нелинейностью;
+    \item заменить плоскую раннюю агрегацию окна на структурный оператор \textbf{Sumigron};
+    \item сохранить нелинейные компоненты \(A,\Gamma,V,Q\) и gated-логику итогового индекса;
+    \item сохранить трёхмерную интерпретацию состояния через \((IIS, RES, DYN)\).
+\end{itemize}
+
+Иными словами, V7 строится как иерархия:
+\[
+\text{окно} \;\to\; \sgop \;\to\; A,\Gamma,V,Q \;\to\; IIS,RES,DYN.
+\]
+
+\section{Оператор Sumigron}
+\subsection{Канонический знак}
+Для оператора Sumigron фиксируется знак
+\[
+\sgop(X,M),
+\]
+где:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \(\sum\) обозначает агрегацию по структуре окна;
+    \item \(\int\) обозначает непрерывный проход по форме сигнала;
+    \item маленький индекс \(\bowtie\) справа снизу обозначает структурное слияние нескольких характеристик окна.
+\end{itemize}
+
+В строгой резервной нотации можно писать также
+\[
+\mathcal{S}_{\mathrm{sg}}(X,M).
+\]
+
+\subsection{Вход оператора}
+Пусть \(W_{i,c}=\{x_{i,c,t}\}_{t=1}^{L_i}\) --- окно длины \(L_i\) для окна \(i\) и канала \(c\).
+
+Сначала считаются обычные статистики:
+\[
+\mu_{i,c}=\frac{1}{L_i}\sum_{t=1}^{L_i}x_{i,c,t},
+\]
+\[
+\sigma_{i,c}=\sqrt{\frac{1}{L_i}\sum_{t=1}^{L_i}(x_{i,c,t}-\mu_{i,c})^2},
+\]
+\[
+\hat{x}_{i,c,t}=\frac{x_{i,c,t}-\mu_{i,c}}{\sigma_{i,c}+\varepsilon}.
+\]
+
+\subsection{Attentive-ядро}
+Внутри окна вводится локальный драйв внимания:
+\[
+u_{i,c,t}=0.60\,\hat{x}_{i,c,t}+0.40\,|\hat{x}_{i,c,t}|.
+\]
+
+Далее вычисляются attention-веса:
+\[
+\alpha_{i,c,t}=
+\frac{\exp(u_{i,c,t}/\tau)}
+{\sum_{s=1}^{L_i}\exp(u_{i,c,s}/\tau)}.
+\]
+
+На их основе задаются три структурные компоненты окна:
+\[
+\mu^{sg}_{i,c}=\sum_{t=1}^{L_i}\alpha_{i,c,t}\,x_{i,c,t},
+\]
+\[
+\sigma^{sg}_{i,c}=
+\sqrt{
+\sum_{t=1}^{L_i}\alpha_{i,c,t}
+\bigl(x_{i,c,t}-\mu^{sg}_{i,c}\bigr)^2
+},
+\]
+\[
+E^{sg}_{i,c}=
+\log\!\left(
+1+\sum_{t=1}^{L_i}\alpha_{i,c,t}\,x_{i,c,t}^2
+\right).
+\]
+
+\subsection{Скалярная форма Sumigron}
+После центрирования и нормировки этих трёх каналов:
+\[
+\tilde{\mu}^{sg}_{i,c},\qquad
+\tilde{\sigma}^{sg}_{i,c},\qquad
+\tilde{E}^{sg}_{i,c},
+\]
+Sumigron определяется как
+\[
+\sgop(W_{i,c})=
+w_\mu \tilde{\mu}^{sg}_{i,c}
++w_\sigma \tilde{\sigma}^{sg}_{i,c}
++w_E \tilde{E}^{sg}_{i,c}.
+\]
+
+В базовой теоретической настройке можно брать:
+\[
+w_\mu=0.32,\qquad
+w_\sigma=0.28,\qquad
+w_E=0.40.
+\]
+
+\section{Компоненты IISVersion7}
+\subsection{Эмоционально-корковый компонент \(A_7\)}
+\[
+A_7=
+\tanh\!\left(
+a_1\,\sgop(W^{\alpha asym}_i)
++a_2\,\sgop(W^{total\ asym}_i)
+\right).
+\]
+
+\subsection{Gamma-компонент \(\Gamma_7\)}
+\[
+\Gamma_7=
+\tanh\!\left(
+g_1\,\sgop(W^\gamma_i)
++g_2\,\sgop(W^{\gamma/\alpha}_i)
+\right).
+\]
+
+\subsection{Вегетативный компонент \(V_7\)}
+\[
+V_7=
+\tanh\!\left(
+v_1\,\sgop(W^{HR}_i)
++v_2\,\sgop(W^{HF/LF}_i)
+\right).
+\]
+
+\subsection{Интегральное качество \(Q_7\)}
+Линейное ядро:
+\[
+Q^{lin}_7=q_1A_7+q_2V_7-q_3\Gamma_7.
+\]
+
+Когерентность:
+\[
+Q^{coh}_7=A_7V_7-\lambda_1|A_7-V_7|-\lambda_2\max(\Gamma_7,0).
+\]
+
+Итоговая формула:
+\[
+Q_7=
+\tanh\!\left(
+\eta_1Q^{lin}_7+\eta_2Q^{coh}_7
+\right).
+\]
+
+\section{Итоговый индекс IISVersion7}
+\subsection{Gated-логиты режимов}
+\[
+z^{reg}_7=b_1Q_7+b_2V_7-b_3\Gamma_7+b_4A_7,
+\]
+\[
+z^{mob}_7=m_1V_7-m_2\Gamma_7-m_3Q_7+m_4A_7,
+\]
+\[
+z^{dep}_7=d_1\Gamma_7-d_2V_7-d_3Q_7-d_4A_7.
+\]
+
+Мягкие веса:
+\[
+\bigl(g^{reg}_7,g^{mob}_7,g^{dep}_7\bigr)
+=
+\operatorname{softmax}(z^{reg}_7,z^{mob}_7,z^{dep}_7).
+\]
+
+\subsection{Локальные режимные оценки}
+\[
+s^{reg}_7=\sigmoid(c_1Q_7+c_2V_7-c_3\Gamma_7),
+\]
+\[
+s^{mob}_7=\sigmoid(r_1A_7+r_2V_7-r_3\Gamma_7),
+\]
+\[
+s^{dep}_7=\sigmoid(-p_1V_7-p_2Q_7-p_3A_7+p_4\Gamma_7).
+\]
+
+\subsection{Финальная формула}
+\[
+IIS_7=
+g^{reg}_7 s^{reg}_7
++g^{mob}_7 s^{mob}_7
++g^{dep}_7 s^{dep}_7.
+\]
+
+\section{Дополнительные координаты трёхмерной карты}
+\subsection{Ресурсность}
+\[
+RES_7=
+\operatorname{clip}\!\left(
+0.5+0.5\tanh\!\bigl(
+\rho_1V_7-\rho_2\max(\Gamma_7,0)-\rho_3|A_7-V_7|
+\bigr),
+0,1
+\right).
+\]
+
+\subsection{Динамика}
+\[
+DYN_7=
+\tanh\!\left(
+\delta_1(IIS_{7,i}-IIS_{7,i-1})
++\delta_2(RES_{7,i}-RES_{7,i-1})
+-\delta_3\,Vol_i
+\right).
+\]
+
+Таким образом, трёхмерная точка состояния имеет вид
+\[
+Z_i=(IIS_{7,i},RES_{7,i},DYN_{7,i}).
+\]
+
+\section{Теоретические преимущества версии V7}
+\subsection{Преимущества относительно раннего сжатия через \texorpdfstring{\( \tanh \)}{tanh}}
+\begin{enumerate}[leftmargin=1.25cm]
+    \item \textbf{Сохранение структуры окна.} В V7 окно не схлопывается сразу в один усреднённый bounded-ответ. Сначала сохраняются уровень, вариативность и энергия.
+    \item \textbf{Сохранение амплитуды.} Нелинейность переносится выше по иерархии. Поэтому амплитуда и внутренняя геометрия окна теряются меньше.
+    \item \textbf{Лучшая работа со структурными режимами.} Если состояния отличаются не только средним уровнем, но и распределением пиков, шумом или burst-поведением, Sumigron теоретически должен различать их лучше.
+\end{enumerate}
+
+\subsection{Преимущества самого оператора Sumigron}
+\begin{enumerate}[leftmargin=1.25cm]
+    \item \textbf{Разделение каналов информации.} Sumigron хранит отдельно \(\mu\), \(\sigma\) и \(E\), а не прячет их в одном числе.
+    \item \textbf{Attention без потери интерпретации.} Внимание применяется к локальной структуре окна, но итог остаётся разложимым на понятные каналы.
+    \item \textbf{Масштабируемость.} Один и тот же оператор можно применять к EEG, ECG, HRV, EDA и другим модальностям.
+    \item \textbf{Совместимость с маркировкой.} Sumigron естественно допускает typed-расширение \(\sgop(X,M)\), где \(M\) кодирует тип сигнала, происхождение и контекст.
+\end{enumerate}
+
+\subsection{Преимущества IISVersion7 как системы}
+\begin{enumerate}[leftmargin=1.25cm]
+    \item \textbf{Иерархичность.} V7 естественно собирает в одну цепочку окно, оператор, компоненты, gated-индекс и 3D-интерпретацию.
+    \item \textbf{Гибкость.} Можно заменить только ранний агрегатор окна, не ломая компоненты \(A,\Gamma,V,Q\) и не уничтожая совместимость с V5/V6.
+    \item \textbf{Более богатая геометрия состояния.} При сохранении \((IIS,RES,DYN)\) V7 остаётся совместимой с 2D и 3D картой состояний.
+    \item \textbf{Лучший теоретический потенциал для 3+ режимов.} За счёт менее плоской ранней агрегации V7 потенциально лучше подходит для выделения промежуточных и переходных состояний.
+\end{enumerate}
+
+\section{Ограничения}
+IISVersion7 в данной записи является \textbf{теоретической} архитектурой.
+Это означает:
+\begin{itemize}[leftmargin=1.25cm]
+    \item формулы задают осмысленную структуру, но ещё не доказывают выигрыш на реальных данных;
+    \item коэффициенты \(a_1,a_2,\dots,\delta_3\) должны подбираться и проверяться на реальных датасетах;
+    \item выигрыш V7 должен подтверждаться отдельно по state-capacity, stability и dynamic-метрикам.
+\end{itemize}
+
+Самая точная интерпретация на текущем этапе:
+\[
+\text{V7 = теоретически более богатая иерархическая версия, но ещё не эмпирически финальная.}
+\]
+
+\end{document}

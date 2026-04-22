@@ -1,0 +1,232 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{enumitem}
+
+\geometry{margin=2.2cm}
+
+\title{Математическая модель IISVersion5}
+\author{Проект анализа интегрального индекса состояния}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Назначение документа}
+Настоящий документ фиксирует математическую формулу версии \textbf{IISVersion5}, введённой как развитие \textbf{IISVersion4}. Основная цель новой версии состоит не в добавлении новых физиологических блоков, а в уменьшении \textbf{плоскости интерпретации} итоговой шкалы. Версия 5 сохраняет опору на реально доступные EEG и ECG/HRV признаки, но заменяет слишком мягкую итоговую интерпретацию на более контрастную нелинейную схему.
+
+\section{Обозначения}
+Используются следующие обозначения:
+\begin{itemize}[leftmargin=1.25cm]
+    \item $A$ --- EEG-компонент латерализации и асимметрии.
+    \item $\Gamma$ --- EEG-компонент активационной нагрузки по gamma-диапазону.
+    \item $V$ --- вегетативный компонент по ECG/HRV.
+    \item $Q$ --- интегральный физиологический компонент согласованности состояния.
+    \item $IIS_{V5}$ --- итоговый интегральный индекс состояния версии 5.
+    \item $\varepsilon$ --- малый стабилизирующий параметр.
+    \item $\sigma(x)=\dfrac{1}{1+e^{-x}}$ --- логистическая сигмоида.
+    \item $\tanh(x)$ --- гиперболический тангенс.
+\end{itemize}
+
+Также используется оператор мягкой центрированной нормировки:
+\begin{equation}
+T(x;c,w)=\tanh\!\left(\frac{x-c}{w}\right),
+\end{equation}
+где $c$ --- центр калибровки, а $w$ --- характерная ширина диапазона.
+
+\section{Компонент \(A\)}
+Компонент $A$ строится как смесь alpha-асимметрии и общей межполушарной асимметрии.
+
+Сначала alpha-асимметрия:
+\begin{equation}
+A_{\alpha}=T(\alpha_{\mathrm{asym}};\ 0.0006126059,\ 0.0005296437).
+\end{equation}
+
+Затем асимметрия суммарной мощности:
+\begin{equation}
+A_{\mathrm{total}}=
+T\!\left(
+\frac{P_L-P_R}{P_L+P_R+\varepsilon};\
+-0.0298851838,\ 0.0287095439
+\right).
+\end{equation}
+
+Итоговый компонент:
+\begin{equation}
+A=\tanh\!\left(1.10\,A_{\alpha}+0.40\,A_{\mathrm{total}}\right).
+\end{equation}
+
+\section{Компонент \(\Gamma\)}
+Gamma-компонент трактуется как маркер перегрева и активационной нагрузки.
+
+Сначала логарифмируется gamma-мощность:
+\begin{equation}
+G_{\log}=\ln(1+P_{\gamma}\cdot 10^{12}),
+\end{equation}
+где множитель $10^{12}$ переводит мощность из $V^2$ в $\mu V^2$.
+
+Далее нормируются две части:
+\begin{equation}
+G_{\gamma}=T(G_{\log};\ 1.5434688676,\ 0.8496713487),
+\end{equation}
+\begin{equation}
+G_{\gamma/\alpha}=T(\ln(1+\gamma/\alpha);\ 0.0003674267,\ 0.0004343448).
+\end{equation}
+
+Итог:
+\begin{equation}
+\Gamma=\tanh\!\left(0.30\,G_{\gamma}+0.70\,G_{\gamma/\alpha}\right).
+\end{equation}
+
+\section{Компонент \(V\)}
+Вегетативный компонент строится как комбинация ЧСС и отношения $HF/LF$.
+
+По частоте сердечных сокращений:
+\begin{equation}
+V_{hr}=T(118.7401955561-HR;\ 0,\ 46.7184548147).
+\end{equation}
+
+По вариабельности:
+\begin{equation}
+V_{hrv}=T(\ln(1+HF/LF);\ 0.9675457417,\ 1.2220370049).
+\end{equation}
+
+Итоговый вегетативный компонент:
+\begin{equation}
+V=\tanh\!\left(0.80\,V_{hr}+0.20\,V_{hrv}\right).
+\end{equation}
+
+\section{Новый компонент \(Q\)}
+Главное отличие версии 5 от версии 4 состоит в том, что $Q$ больше не является просто мягкой смесью $A$, $V$ и $\Gamma$. Вместо этого вводится \textbf{контрастная физиологическая согласованность}.
+
+\subsection{Линейное ядро}
+\begin{equation}
+Q_{\mathrm{lin}}=0.50A+0.42V-0.30\Gamma.
+\end{equation}
+
+\subsection{Когерентность}
+\begin{equation}
+Q_{\mathrm{coh}}=A\cdot V-0.50|A-V|-0.18\max(\Gamma,0).
+\end{equation}
+
+Здесь:
+\begin{itemize}[leftmargin=1.25cm]
+    \item произведение $A\cdot V$ усиливает состояние, когда корковая и вегетативная части согласованы;
+    \item штраф $|A-V|$ подавляет ситуации, где EEG и HRV указывают в разные стороны;
+    \item штраф $\max(\Gamma,0)$ уменьшает оценку при перегретой активации.
+\end{itemize}
+
+\subsection{Итоговая формула \(Q\)}
+\begin{equation}
+Q=\tanh\!\left(1.4\,Q_{\mathrm{lin}}+0.55\,Q_{\mathrm{coh}}\right).
+\end{equation}
+
+\section{Итоговая формула \(IISVersion5\)}
+\subsection{Линейное ядро}
+\begin{equation}
+core=0.12A-0.07\Gamma+0.24V+0.57Q.
+\end{equation}
+
+\subsection{Центрирование}
+\begin{equation}
+z=core-0.08.
+\end{equation}
+
+\subsection{Контрастный слой}
+\begin{equation}
+contrast=
+2.6z
++0.8z^3
++0.18(Q-V)
+-0.06\max(\Gamma,0).
+\end{equation}
+
+Здесь:
+\begin{itemize}[leftmargin=1.25cm]
+    \item член $2.6z$ задаёт базовое растяжение шкалы;
+    \item кубический член $0.8z^3$ усиливает края распределения без резких разрывов;
+    \item член $0.18(Q-V)$ повышает контраст между интегральным качеством и чисто вегетативной устойчивостью;
+    \item тормоз $-0.06\max(\Gamma,0)$ ослабляет состояние при перегретой активации.
+\end{itemize}
+
+\subsection{Базовая и контрастная оценки}
+\begin{equation}
+IIS_{\mathrm{base}}=\sigma(core),
+\end{equation}
+\begin{equation}
+IIS_{\mathrm{contrast}}=0.5+0.5\tanh(contrast).
+\end{equation}
+
+\subsection{Финальная смесь}
+\begin{equation}
+IIS_{V5}=
+\operatorname{clip}\!\left(
+0.65\,IIS_{\mathrm{base}}+0.35\,IIS_{\mathrm{contrast}},
+0,1
+\right).
+\end{equation}
+
+Таким образом, версия 5 не отказывается от устойчивой логистической интерпретации, а лишь частично смешивает её с более контрастной нелинейной шкалой.
+
+\section{Proxy-режим}
+В режиме \texttt{proxy} итоговый компонент $Q$ может быть мягко якорирован по self-report valence/arousal:
+\begin{equation}
+Q_{\mathrm{anchor}}=
+\tanh\!\left(
+2.4\left(
+0.65\,valence_{\mathrm{norm}}
++0.35(1-arousal_{\mathrm{norm}})
+-0.5
+\right)
+\right).
+\end{equation}
+
+Тогда:
+\begin{equation}
+Q_{\mathrm{proxy}}=0.75Q+0.25Q_{\mathrm{anchor}}.
+\end{equation}
+
+После этого в формулу $IIS_{V5}$ подставляется уже $Q_{\mathrm{proxy}}$.
+
+\section{Динамическое продолжение}
+В проекте используется причинная динамическая версия, в которой статический $IIS_{V5}(t)$ подаётся на каузальный сглаживающий блок. Отдельная динамическая физиологическая формула пока не вводится; вместо этого применяется следующий принцип:
+\begin{itemize}[leftmargin=1.25cm]
+    \item сначала считается статический $IIS_{V5}(t)$ на каждом временном окне;
+    \item затем строятся каузальные оценки по прошлым окнам;
+    \item ухудшение допускается быстрее, восстановление моделируется медленнее.
+\end{itemize}
+
+В символическом виде:
+\begin{equation}
+IIS_{\mathrm{dyn}}(t)=(1-w_t)\,IIS_{V5}(t)+w_t\,S_t,
+\end{equation}
+где $S_t$ --- каузальная сглаженная часть, вычисленная только по прошлым окнам, а $w_t$ зависит от текущей волатильности траектории.
+
+\section{Интерпретация}
+Смысл версии 5 таков:
+\begin{enumerate}[leftmargin=1.25cm]
+    \item физиологическое ядро по-прежнему полностью строится на реально измеряемых EEG и ECG/HRV признаках;
+    \item середина шкалы перестаёт быть излишне плоской;
+    \item переходы между режимами становятся визуально и аналитически более различимыми;
+    \item модель не вводит недоступные гормональные измерения и не опирается на гипотезу о коэффициенте $K$.
+\end{enumerate}
+
+\section{Эмпирический смысл}
+На текущих реальных данных версия 5 показала:
+\begin{itemize}[leftmargin=1.25cm]
+    \item заметное расширение диапазона итогового индекса по сравнению с версией 4;
+    \item более контрастное разделение baseline/stress на датасете ds002724;
+    \item ограниченные, но всё ещё не окончательные признаки третьего режима;
+    \item отсутствие искусственного подтверждения 4 и более устойчивых состояний.
+\end{itemize}
+
+Следовательно, \textbf{IISVersion5} следует трактовать как \textbf{контрастную безгормональную интерпретацию} модели ИИС, а не как новый физиологический блок.
+
+\end{document}

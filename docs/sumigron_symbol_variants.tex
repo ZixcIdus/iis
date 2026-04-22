@@ -1,0 +1,171 @@
+\documentclass[12pt]{article}
+\usepackage[a4paper,margin=1.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,booktabs,array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue
+}
+
+\newcommand{\sgoverlay}[2]{\mathop{\mathchoice
+  {\ooalign{\hfil$\displaystyle\sum$\hfil\cr\hfil$#1$\hfil\cr}}
+  {\ooalign{\hfil$\textstyle\sum$\hfil\cr\hfil$#2$\hfil\cr}}
+  {\ooalign{\hfil$\scriptstyle\sum$\hfil\cr\hfil$#2$\hfil\cr}}
+  {\ooalign{\hfil$\scriptscriptstyle\sum$\hfil\cr\hfil$#2$\hfil\cr}}
+}}
+
+\newcommand{\sgsumintright}[1]{\mathop{\mathchoice
+  {\ooalign{
+    \hfil$\displaystyle\sum$\hfil\cr
+    \hfil$\displaystyle\int$\hfil\cr
+    \hidewidth\raisebox{-1.35ex}{\kern1.25ex$\scriptstyle #1$}\hidewidth\cr
+  }}
+  {\ooalign{
+    \hfil$\textstyle\sum$\hfil\cr
+    \hfil$\textstyle\int$\hfil\cr
+    \hidewidth\raisebox{-1.00ex}{\kern1.00ex$\scriptscriptstyle #1$}\hidewidth\cr
+  }}
+  {\ooalign{
+    \hfil$\scriptstyle\sum$\hfil\cr
+    \hfil$\scriptstyle\int$\hfil\cr
+    \hidewidth\raisebox{-0.75ex}{\kern0.75ex$\scriptscriptstyle #1$}\hidewidth\cr
+  }}
+  {\ooalign{
+    \hfil$\scriptscriptstyle\sum$\hfil\cr
+    \hfil$\scriptscriptstyle\int$\hfil\cr
+    \hidewidth\raisebox{-0.60ex}{\kern0.55ex$\scriptscriptstyle #1$}\hidewidth\cr
+  }}
+}}
+
+\newcommand{\sgdiamond}{\sgoverlay{\displaystyle\diamond}{\textstyle\diamond}}
+\newcommand{\sgint}{\sgoverlay{\displaystyle\int}{\textstyle\int}}
+\newcommand{\sgstar}{\sgoverlay{\displaystyle\star}{\textstyle\star}}
+\newcommand{\sgcirc}{\sgoverlay{\displaystyle\circ}{\textstyle\circ}}
+\newcommand{\sgsquare}{\sgoverlay{\displaystyle\square}{\textstyle\square}}
+\newcommand{\sgtriangle}{\sgoverlay{\displaystyle\triangle}{\textstyle\triangle}}
+\newcommand{\sgbowtie}{\sgoverlay{\displaystyle\bowtie}{\textstyle\bowtie}}
+\newcommand{\sgbullet}{\sgoverlay{\displaystyle\bullet}{\textstyle\bullet}}
+\newcommand{\sgtimes}{\sgoverlay{\displaystyle\times}{\textstyle\times}}
+\newcommand{\sgplus}{\sgoverlay{\displaystyle+}{\textstyle+}}
+\newcommand{\sgfinaldiamond}{\sgsumintright{\diamond}}
+\newcommand{\sgfinalbullet}{\sgsumintright{\bullet}}
+\newcommand{\sgfinalbowtie}{\sgsumintright{\bowtie}}
+
+\newcommand{\sampleexpr}[1]{\[
+  #1(X,M)=\sum_{i=1}^{N}\omega_i\bigl(a\mu_i+b\sigma_i+dE_i\bigr)
+\]}
+
+\begin{document}
+
+\begin{center}
+{\LARGE Sumigron Symbol Variants}\\[0.4em]
+{\large Ten operator glyphs for visual selection}
+\end{center}
+
+\vspace{0.6em}
+
+\noindent
+This sheet is for choosing a visual operator sign for the Sumigron family. The strict notation can still remain
+\[
+\mathcal{S}_{\mathrm{sg}}(X,M)
+\]
+inside formal text, while a custom glyph may be used in diagrams, slides, or exploratory notes.
+
+\section*{Recommended Reading Rule}
+\begin{itemize}
+\item If you want the sign to reflect your latest idea exactly, prefer \(\sgfinaldiamond\): sum plus integral with a tiny lower-right geometric marker.
+\item If Sumigron is mainly about \textbf{structured aggregation}, prefer \(\sgdiamond\) or \(\sgbowtie\).
+\item If it is mainly about \textbf{continuous accumulation}, prefer \(\sgint\).
+\item If it is mainly about \textbf{salience and attention}, prefer \(\sgstar\) or \(\sgbullet\).
+\item If it is mainly about \textbf{matrix/window blocks}, prefer \(\sgsquare\).
+\end{itemize}
+
+\section*{Preferred Hybrid}
+Your current idea in strict form:
+\[
+\sgfinaldiamond(X,M)
+\]
+
+\noindent
+Meaning:
+\begin{itemize}
+\item \(\sum\) gives aggregation,
+\item \(\int\) gives continuous flow through the window,
+\item the tiny lower-right marker gives Sumigron its own identity.
+\end{itemize}
+
+\noindent
+Three close variants:
+\[
+\sgfinaldiamond(X,M), \qquad
+\sgfinalbullet(X,M), \qquad
+\sgfinalbowtie(X,M)
+\]
+
+\noindent
+Interpretation:
+\begin{itemize}
+\item \(\sgfinaldiamond\): structured/geometric Sumigron
+\item \(\sgfinalbullet\): compact attentive Sumigron
+\item \(\sgfinalbowtie\): fusion-style Sumigron
+\end{itemize}
+
+\section*{Visual Catalog}
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{>{\raggedright\arraybackslash}p{1.1cm} >{\centering\arraybackslash}p{2.0cm} >{\centering\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{8.3cm}}
+\toprule
+ID & Macro & Glyph & Intended reading \\
+\midrule
+\endhead
+V1 & \texttt{\textbackslash sgfinaldiamond} & \(\sgfinaldiamond(X,M)\) & Sum plus integral with a tiny lower-right diamond. This is the direct implementation of your latest idea and the strongest candidate for a custom canonical Sumigron glyph. \\
+V2 & \texttt{\textbackslash sgfinalbullet} & \(\sgfinalbullet(X,M)\) & Same hybrid base, but with a lower-right bullet. Cleaner and more compact if the diamond feels visually overloaded. \\
+V3 & \texttt{\textbackslash sgfinalbowtie} & \(\sgfinalbowtie(X,M)\) & Same hybrid base, but with a lower-right bowtie. Better if you want the marker to imply fusion. \\
+V4 & \texttt{\textbackslash sgdiamond} & \(\sgdiamond(X,M)\) & Sum plus diamond. Best if Sumigron is treated as a structured or geometric aggregator. This is the most semantically stable non-hybrid option. \\
+V5 & \texttt{\textbackslash sgint} & \(\sgint(X,M)\) & Sum plus integral. Best if the operator should feel like a cumulative flow through the window rather than a plain reduction. \\
+V6 & \texttt{\textbackslash sgstar} & \(\sgstar(X,M)\) & Sum plus star. Good for an attentive or salient variant, where peaks or informative fragments get emphasized. \\
+V7 & \texttt{\textbackslash sgsquare} & \(\sgsquare(X,M)\) & Sum plus square. Good for matrix or block aggregation. Visually fits windows, tensors, and typed channel tables. \\
+V8 & \texttt{\textbackslash sgbowtie} & \(\sgbowtie(X,M)\) & Sum plus bowtie. Best if Sumigron is interpreted as a fusion operator that mixes several channels into one structured score. \\
+V9 & \texttt{\textbackslash sgbullet} & \(\sgbullet(X,M)\) & Sum plus bullet. Minimal attentive marker. Strong if the operator should feel compact and focused. \\
+V10 & \texttt{\textbackslash sgtimes} & \(\sgtimes(X,M)\) & Sum plus cross. Reads like interaction, coupling, or cross-channel synthesis. Useful if nonlinear interaction is central. \\
+\bottomrule
+\end{longtable}
+
+\section*{In Formula Form}
+Below the same operators are rendered in the same Sumigron expression template.
+
+\sampleexpr{\sgfinaldiamond}
+\sampleexpr{\sgfinalbullet}
+\sampleexpr{\sgfinalbowtie}
+\sampleexpr{\sgdiamond}
+\sampleexpr{\sgint}
+\sampleexpr{\sgstar}
+\sampleexpr{\sgsquare}
+\sampleexpr{\sgbowtie}
+\sampleexpr{\sgbullet}
+\sampleexpr{\sgtimes}
+
+\section*{Pragmatic Choice}
+If one sign should be chosen right now:
+\begin{itemize}
+\item \textbf{Best custom canonical sign}: \(\sgfinaldiamond\)
+\item \textbf{Best fallback if the diamond is too busy}: \(\sgfinalbullet\)
+\item \textbf{Best formal default without custom corner marker}: \(\sgdiamond\)
+\item \textbf{Best for typed matrix aggregation}: \(\sgsquare\)
+\item \textbf{Best for multimodal fusion}: \(\sgbowtie\)
+\end{itemize}
+
+\noindent
+The clean fallback notation remains
+\[
+\mathcal{S}_{\mathrm{sg}}(X,M), \qquad
+\mathcal{S}^{\mathrm{att}}_{\mathrm{sg}}(X,M).
+\]
+
+\end{document}

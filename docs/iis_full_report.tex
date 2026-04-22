@@ -1,0 +1,443 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{pdflscape}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage[table]{xcolor}
+\geometry{margin=1.8cm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\newcommand{\sgop}{\mathop{\sum\!\!\!\int_{\bowtie}}}
+
+\title{IIS Full Test + Documentation Pack}
+\author{Проект анализа интегрального индекса состояния}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Введение}
+Этот отчёт объединяет в одном документе версии \texttt{IISVersion1}--\texttt{IISVersion7}, полную матрицу доступных тестовых сценариев, state capacity, Dreamer-калибровки и synthetic-бенч оператора Sumigron.
+
+Главный принцип документа: слабые результаты не скрываются. Если версия не универсальна, если режим не адаптирован к динамике или если на конкретном датасете видны только tentative-сигналы, это фиксируется явно.
+
+\textbf{Лучшая практическая линия сейчас:} IISVersion6.\\
+\textbf{Лучшая теоретическая линия:} IISVersion7 + Sumigron.\\
+\textbf{Самый сильный реальный сценарий:} ds002724 / strict (V6).
+
+\section{Что такое strict / proxy / hybrid}
+\begin{center}
+\begin{tabular}{p{2.2cm}p{11.8cm}}
+\toprule
+Режим & Смысл \\
+\midrule
+Strict & Используются только реально измеренные прямые признаки. Ничего не додумывается и не якорится proxy-метками. \\
+Proxy & Разрешены proxy-замены и мягкие якоря по доступным косвенным признакам и self-report. Это полезно для исторических V1–V3 и части ранних экспериментов. \\
+Hybrid & Модель использует всё, что реально доступно: прямые признаки остаются прямыми, недостающие части могут компенсироваться proxy-слоем. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Карта версий и схемы}
+\subsubsection*{Эволюция версий V1\ensuremath{\rightarrow}V7} Переход от исторических proxy-ориентированных формул к негормональным и затем к gated/Sumigron-архитектурам.
+\begin{center}\fbox{\parbox{2.7cm}{\centering V1: Тестовое раннее ядро}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering V2: Версия 1.0 с общей лево-правой мощностью}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering V3: Версия 2.0 с K и отдельной валентностью Q}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering V4: Первое негормональное практическое ядро}}\\[0.6em]
+$\downarrow$\\[0.6em]
+\fbox{\parbox{2.7cm}{\centering V5: Контрастная нелинейная версия}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering V6: Gated-модель режимов}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering V7: Экспериментальная Sumigron-бета}}\end{center}
+\subsubsection*{Общий pipeline} Общая цепочка обработки для всех современных версий.
+\begin{center}\fbox{\parbox{2.7cm}{\centering dataset}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering segments / windows}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering features}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering components}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering IIS}}\end{center}
+\subsubsection*{Режимы данных} Три режима доступа к данным и компенсации пропусков.
+\begin{center}\fbox{\parbox{2.7cm}{\centering strict}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering proxy}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering hybrid}}\end{center}
+\subsubsection*{Сравнение архитектур V4/V5/V6/V7} Упрощённая карта того, какие архитектурные идеи добавлялись поверх практического ядра.
+\begin{center}\begin{tabular}{lccccc}\toprule Версия & Гормоны & Нелинейная геометрия & Gated-режимы & 3D слой & Sumigron \\\midrule V4 & нет & частично & нет & частично & нет \\ V5 & нет & да & нет & частично & нет \\ V6 & нет & да & да & частично & нет \\ V7 beta & нет & да & да & да & да \\\bottomrule\end{tabular}\end{center}
+\subsubsection*{Архитектура V7 beta} Новая ветка: структурный оператор до gated-слоя и 3D-интерпретации.
+\begin{center}\fbox{\parbox{2.7cm}{\centering window / subterms}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering Sumigron}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering A / Gamma / V / Q}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering gated IIS}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering RES / DYN}}\end{center}
+\subsubsection*{Внутренняя логика Sumigron} Разделение окна на уровень, структуру и энергию с attentive-взвешиванием.
+\begin{center}\fbox{\parbox{2.7cm}{\centering уровень}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering структура}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering энергия}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering attentive weighting}} $\rightarrow$ \fbox{\parbox{2.7cm}{\centering структурный скаляр}}\end{center}
+\subsubsection*{Матрица применимости версий} Явное разделение статической, динамической и proxy/hybrid-применимости.
+\begin{center}\begin{tabular}{lccccc}\toprule Версия & static & dynamic & proxy & hybrid & calibrated \\\midrule V1 & да & нет & да & да & нет \\ V2 & да & нет & да & да & нет \\ V3 & да & нет & да & да & нет \\ V4 & да & да & да & да & нет \\ V5 & да & да & да & да & нет \\ V6 & да & да & да & да & нет \\ V7 & да & да & да & да & да \\\bottomrule\end{tabular}\end{center}
+
+\section{Полная документация по каждой версии}
+
+\subsection*{V1. Тестовое раннее ядро \textcolor{green!20!black}{\textbf{рабочее}}}
+\[
+IIS_1=\sigma(0.35A+0.25\Gamma+0.30H+0.10V)
+\]
+\textbf{Назначение.} Проверить саму идею интегрального индекса на четырёх базовых блоках.
+
+\textbf{Сильная сторона.} Максимально простая и прозрачная структура.
+
+\textbf{Слабое место.} Сильно зависит от гормонального proxy-блока и плохо переносится в strict-режим.
+
+\textbf{Уровень универсальности.} Низкая
+
+\textbf{Статус.} Историческая proxy-ориентированная версия. Полезна как точка отсчёта, но не как современное универсальное ядро.
+
+\textbf{Входные компоненты:}
+\begin{itemize}[leftmargin=1.2cm]
+\item A по alpha-асимметрии
+\item Gamma
+\item H
+\item V
+\end{itemize}
+
+\textbf{Ограничения:}
+\begin{itemize}[leftmargin=1.2cm]
+\item историческая версия
+\item не универсальна
+\item proxy-ориентирована
+\item не адаптирована к динамике
+\end{itemize}
+
+
+\subsection*{V2. Версия 1.0 с общей лево-правой мощностью \textcolor{green!20!black}{\textbf{рабочее}}}
+\[
+IIS_2=\sigma(0.35A+0.25\Gamma+0.30H+0.10V)
+\]
+\textbf{Назначение.} Сохранить простую интеграцию V1, но заменить A на более грубую межполушарную мощность.
+
+\textbf{Сильная сторона.} Чуть ближе к общим EEG-признакам, чем V1.
+
+\textbf{Слабое место.} Остаётся завязанной на гормональный блок и в реальных strict-сценариях почти неработоспособна.
+
+\textbf{Уровень универсальности.} Низкая
+
+\textbf{Статус.} Историческая промежуточная версия. Применимость ограничена proxy/hybrid-сценариями.
+
+\textbf{Входные компоненты:}
+\begin{itemize}[leftmargin=1.2cm]
+\item A по общей мощности полушарий
+\item Gamma
+\item H
+\item V
+\end{itemize}
+
+\textbf{Ограничения:}
+\begin{itemize}[leftmargin=1.2cm]
+\item историческая версия
+\item не универсальна
+\item proxy-ориентирована
+\item не адаптирована к динамике
+\end{itemize}
+
+
+\subsection*{V3. Версия 2.0 с K и отдельной валентностью Q \textcolor{green!20!black}{\textbf{рабочее}}}
+\[
+IIS_3=\sigma(0.35A+0.25\Gamma+0.30H+0.10V),\quad H=\frac{K\cdot DA}{50}-\frac{C}{15}
+\]
+\textbf{Назначение.} Добавить коэффициент проницаемости K и отделить диагностическую валентность Q от основного IIS.
+
+\textbf{Сильная сторона.} Содержательно богаче V1/V2 за счёт K и Q.
+
+\textbf{Слабое место.} Слишком тяжело опирается на proxy-нормировки и не подтверждается как универсальная практическая модель.
+
+\textbf{Уровень универсальности.} Низкая
+
+\textbf{Статус.} Историческая расширенная версия. Полезна для истории идеи и сопоставления, но не для основной практической линии.
+
+\textbf{Входные компоненты:}
+\begin{itemize}[leftmargin=1.2cm]
+\item A
+\item Gamma
+\item H через K
+\item V
+\item Q как отдельный диагностический блок
+\end{itemize}
+
+\textbf{Ограничения:}
+\begin{itemize}[leftmargin=1.2cm]
+\item историческая версия
+\item не универсальна
+\item proxy-ориентирована
+\item не адаптирована к динамике
+\end{itemize}
+
+
+\subsection*{V4. Первое негормональное практическое ядро \textcolor{green!20!black}{\textbf{рабочее}}}
+\[
+IIS_4=\sigma(0.10A-0.05\Gamma+0.25V+0.60Q_4)
+\]
+\textbf{Назначение.} Убрать гормоны и собрать рабочую EEG/ECG-модель для открытых данных.
+
+\textbf{Сильная сторона.} Первая реально переносимая строгая версия без выдуманных биохимических блоков.
+
+\textbf{Слабое место.} Шкала ещё довольно плоская; промежуточные режимы часто сглаживаются.
+
+\textbf{Уровень универсальности.} Средняя
+
+\textbf{Статус.} Рабочая практическая база. Хороша как baseline, но по внутренней геометрии уступает V5/V6.
+
+\textbf{Входные компоненты:}
+\begin{itemize}[leftmargin=1.2cm]
+\item A по alpha/total asymmetry
+\item Gamma по gamma и gamma/alpha
+\item V по HR и HF/LF
+\item Q как физиологическая интеграция
+\end{itemize}
+
+\textbf{Ограничения:}
+\begin{itemize}[leftmargin=1.2cm]
+\item явных специальных флагов нет
+\end{itemize}
+
+
+\subsection*{V5. Контрастная нелинейная версия \textcolor{green!20!black}{\textbf{рабочее}}}
+\[
+IIS_5=\operatorname{clip}\!\left((1-m)IIS_{5,\mathrm{base}}+mIIS_{5,\mathrm{contrast}},0,1\right)
+\]
+\textbf{Назначение.} Раскрыть контраст режимов и уменьшить плоскость середины шкалы без возврата к гормонам.
+
+\textbf{Сильная сторона.} Часто лучше выделяет скрытую структуру и средние режимы, чем V4.
+
+\textbf{Слабое место.} Не универсальна по датасетам: на части наборов выигрывает, на части нет; чувствительна к калибровке.
+
+\textbf{Уровень универсальности.} Средняя
+
+\textbf{Статус.} Нелинейная практическая версия. Хорошо работает там, где помогает контрастная геометрия, но не является окончательно универсальной.
+
+\textbf{Входные компоненты:}
+\begin{itemize}[leftmargin=1.2cm]
+\item A
+\item Gamma
+\item V
+\item Q с coherence/synergy/conflict
+\end{itemize}
+
+\textbf{Ограничения:}
+\begin{itemize}[leftmargin=1.2cm]
+\item не универсальна
+\end{itemize}
+
+
+\subsection*{V6. Gated-модель режимов \textcolor{green!20!black}{\textbf{рабочее}}}
+\[
+IIS_6=g_{\mathrm{reg}}i_{\mathrm{reg}}+g_{\mathrm{mob}}i_{\mathrm{mob}}+g_{\mathrm{dep}}i_{\mathrm{dep}}-\lambda_H H(g)-\lambda_C C
+\]
+\textbf{Назначение.} Сделать модель смесью режимов regulation / mobilization / depletion вместо одной глобальной почти линейной формулы.
+
+\textbf{Сильная сторона.} Лучшее текущее универсальное практическое strict-ядро, особенно на ds002724.
+
+\textbf{Слабое место.} Число базовых режимов зашито в gate-архитектуру; не всегда раскрывает более богатую карту состояний.
+
+\textbf{Уровень универсальности.} Высокая
+
+\textbf{Статус.} Текущая лучшая практическая линия для честных негормональных strict-сценариев.
+
+\textbf{Входные компоненты:}
+\begin{itemize}[leftmargin=1.2cm]
+\item A
+\item Gamma
+\item V
+\item Q
+\item softmax-gates режимов
+\end{itemize}
+
+\textbf{Ограничения:}
+\begin{itemize}[leftmargin=1.2cm]
+\item явных специальных флагов нет
+\end{itemize}
+
+
+\subsection*{V7. Экспериментальная Sumigron-бета \textcolor{green!20!black}{\textbf{рабочее}}}
+\[
+IIS_7=g^{reg}_7 s^{reg}_7 + g^{mob}_7 s^{mob}_7 + g^{dep}_7 s^{dep}_7,\quad \sgop=\sum+\int+\bowtie
+\]
+\textbf{Назначение.} Перенести структурную нелинейность раньше по цепочке через оператор Sumigron и сохранить 3D-слой IIS/RES/DYN.
+
+\textbf{Сильная сторона.} Даёт новую архитектурную линию и уже показывает пользу на части наборов и synthetic-тестах.
+
+\textbf{Слабое место.} Пока beta-версия; есть dataset-specific override для DREAMER, поэтому она ещё не универсальна.
+
+\textbf{Уровень универсальности.} Экспериментальная
+
+\textbf{Статус.} Экспериментальная V7-beta. Есть Dreamer-specific override, поэтому её нельзя пока подавать как окончательно универсальную.
+
+\textbf{Входные компоненты:}
+\begin{itemize}[leftmargin=1.2cm]
+\item A, Gamma, V через Sumigron-подтермы
+\item Q как структурная интеграция
+\item gated IIS
+\item RES
+\item DYN
+\end{itemize}
+
+\textbf{Ограничения:}
+\begin{itemize}[leftmargin=1.2cm]
+\item не универсальна
+\item dataset-specific calibration
+\end{itemize}
+
+
+\section{Матрица совместимости}
+\begin{center}
+\begin{tabular}{lccccc}
+\toprule
+Версия & static & dynamic & proxy & hybrid & Флаги \\
+\midrule
+V1 & да & нет & да & да & историческая версия, не универсальна, proxy-ориентирована, не адаптирована к динамике \\
+V2 & да & нет & да & да & историческая версия, не универсальна, proxy-ориентирована, не адаптирована к динамике \\
+V3 & да & нет & да & да & историческая версия, не универсальна, proxy-ориентирована, не адаптирована к динамике \\
+V4 & да & да & да & да & --- \\
+V5 & да & да & да & да & не универсальна \\
+V6 & да & да & да & да & --- \\
+V7 & да & да & да & да & не универсальна, dataset-specific calibration \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Сравнение версий на тестах}
+\subsection*{Полная матрица по всем dataset/mode}
+\begin{landscape}
+\scriptsize
+\begin{longtable}{p{2.8cm}p{0.8cm}rrrrrp{1.2cm}rp{4.4cm}p{1.6cm}}
+\toprule
+Scenario & V & Cov & Valid & Eff & Ovl & Sens & Rel & k & Verdict & Dyn \\
+\midrule
+\endfirsthead
+\toprule
+Scenario & V & Cov & Valid & Eff & Ovl & Sens & Rel & k & Verdict & Dyn \\
+\midrule
+\endhead
+CASE / hybrid & V1 & 1.000 & 7230 & 0.031 & 0.999 & 0.000 & low & 2 & tentative evidence for 2 states & not\_adapted \\
+CASE / hybrid & V2 & 1.000 & 7230 & 0.031 & 0.999 & 0.000 & low & 2 & tentative evidence for 2 states & not\_adapted \\
+CASE / hybrid & V3 & 1.000 & 7230 & 0.031 & 0.999 & 0.000 & low & 2 & tentative evidence for 2 states & not\_adapted \\
+CASE / hybrid & V4 & 1.000 & 7230 & -0.087 & 0.918 & 0.073 & medium & 2 & tentative evidence for 2 states & available \\
+CASE / hybrid & V5 & 1.000 & 7230 & -0.097 & 0.916 & 0.152 & medium & 2 & tentative evidence for 2 states & partial\_optional \\
+CASE / hybrid & V6 & 1.000 & 7230 & -0.117 & 0.917 & 0.332 & medium & 3 & tentative evidence for 2 states & available \\
+CASE / hybrid & V7 & 1.000 & 7230 & -0.040 & 0.905 & 0.022 & medium & 2 & tentative evidence for 2 states & partial\_optional \\
+WESAD / hybrid & V1 & 1.000 & 1087 & -0.406 & 0.807 & 0.202 & low & 2 & confidently 2 states & not\_adapted \\
+WESAD / hybrid & V2 & 1.000 & 1087 & -0.406 & 0.807 & 0.202 & low & 2 & confidently 2 states & not\_adapted \\
+WESAD / hybrid & V3 & 1.000 & 1087 & -0.406 & 0.807 & 0.202 & low & 2 & confidently 2 states & not\_adapted \\
+WESAD / hybrid & V4 & 1.000 & 1087 & -0.701 & 0.674 & 0.073 & medium & 2 & confidently 2 states & available \\
+WESAD / hybrid & V5 & 1.000 & 1087 & -0.699 & 0.666 & 0.105 & medium & 3 & confidently 2 states, limited evidence for 3rd mode & available \\
+WESAD / hybrid & V6 & 1.000 & 1087 & -0.676 & 0.676 & 0.215 & medium & 2 & confidently 2 states & available \\
+WESAD / hybrid & V7 & 1.000 & 1087 & -0.694 & 0.648 & 0.061 & medium & 2 & confidently 2 states & partial\_optional \\
+ds002722 / strict & V1 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+ds002722 / strict & V2 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+ds002722 / strict & V3 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+ds002722 / strict & V4 & 0.998 & 6756 & 0.048 & 0.867 & 0.033 & high & 3 & tentative evidence for 2 states & available \\
+ds002722 / strict & V5 & 0.998 & 6756 & 0.001 & 0.828 & 0.080 & high & 2 & tentative evidence for 2 states & available \\
+ds002722 / strict & V6 & 0.998 & 6756 & 0.030 & 0.789 & 0.157 & high & 3 & tentative evidence for 2 states & available \\
+ds002722 / strict & V7 & 0.998 & 6756 & 0.000 & 0.797 & 0.084 & high & 2 & tentative evidence for 2 states & available \\
+ds002722 / proxy & V1 & 0.999 & 1691 & -2.410 & 0.212 & 0.057 & high & 2 & confidently 2 states, limited evidence for 3rd mode & not\_adapted \\
+ds002722 / proxy & V2 & 0.999 & 1691 & -2.412 & 0.224 & 0.057 & high & 2 & confidently 2 states, limited evidence for 3rd mode & not\_adapted \\
+ds002722 / proxy & V3 & 0.999 & 1691 & -1.853 & 0.329 & 0.060 & high & 2 & confidently 2 states, limited evidence for 3rd mode & not\_adapted \\
+ds002722 / proxy & V4 & 1.000 & 1692 & -0.959 & 0.522 & 0.033 & medium & 3 & likely 3 states & available \\
+ds002722 / proxy & V5 & 1.000 & 1692 & -0.290 & 0.675 & 0.094 & medium & 2 & tentative evidence for 2 states & partial\_optional \\
+ds002722 / proxy & V6 & 1.000 & 1692 & 0.034 & 0.668 & 0.162 & medium & 3 & tentative evidence for 2 states & available \\
+ds002722 / proxy & V7 & 1.000 & 1692 & 0.053 & 0.627 & 0.086 & medium & 2 & tentative evidence for 2 states & partial\_optional \\
+ds002724 / strict & V1 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+ds002724 / strict & V2 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+ds002724 / strict & V3 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+ds002724 / strict & V4 & 0.998 & 13801 & -0.371 & 0.825 & 0.033 & high & 2 & confidently 2 states & available \\
+ds002724 / strict & V5 & 0.998 & 13801 & -0.413 & 0.802 & 0.072 & high & 2 & confidently 2 states & available \\
+ds002724 / strict & V6 & 0.998 & 13801 & -0.433 & 0.799 & 0.144 & high & 2 & confidently 2 states & available \\
+ds002724 / strict & V7 & 0.998 & 13801 & -0.254 & 0.845 & 0.067 & high & 2 & tentative evidence for 2 states & available \\
+ds002724 / proxy & V1 & 0.999 & 3454 & -2.687 & 0.174 & 0.058 & high & 2 & confidently 2 states, limited evidence for 3rd mode & not\_adapted \\
+ds002724 / proxy & V2 & 0.999 & 3454 & -2.693 & 0.174 & 0.058 & high & 3 & likely 3 states & not\_adapted \\
+ds002724 / proxy & V3 & 0.999 & 3454 & -2.178 & 0.273 & 0.061 & high & 4 & likely 3 states & not\_adapted \\
+ds002724 / proxy & V4 & 1.000 & 3456 & -1.446 & 0.455 & 0.033 & medium & 2 & confidently 2 states, limited evidence for 3rd mode & available \\
+ds002724 / proxy & V5 & 1.000 & 3456 & -0.779 & 0.602 & 0.079 & medium & 3 & confidently 2 states, limited evidence for 3rd mode & partial\_optional \\
+ds002724 / proxy & V6 & 1.000 & 3456 & -0.564 & 0.689 & 0.145 & medium & 3 & confidently 2 states, limited evidence for 3rd mode & available \\
+ds002724 / proxy & V7 & 1.000 & 3456 & -0.536 & 0.639 & 0.067 & medium & 3 & confidently 2 states, limited evidence for 3rd mode & partial\_optional \\
+DREAMER / strict & V1 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+DREAMER / strict & V2 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+DREAMER / strict & V3 & 0.000 & 0 & --- & --- & --- & low & --- & nan & not\_adapted \\
+DREAMER / strict & V4 & 0.711 & 23169 & 0.025 & 0.886 & 0.033 & high & 2 & tentative evidence for 2 states & available \\
+DREAMER / strict & V5 & 0.711 & 23169 & -0.006 & 0.876 & 0.063 & high & 2 & tentative evidence for 2 states & available \\
+DREAMER / strict & V6 & 0.711 & 23169 & 0.004 & 0.893 & 0.157 & high & 2 & tentative evidence for 2 states & available \\
+DREAMER / strict & V7 & 0.711 & 23169 & -0.016 & 0.897 & 0.061 & high & 3 & tentative evidence for 2 states & available \\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{landscape}
+
+\subsection*{Лучшие версии по сценариям}
+\begin{center}
+\begin{tabular}{p{2.8cm}p{0.8cm}p{1.3cm}rrrrp{4.2cm}}
+\toprule
+Scenario & V & Rel & Eff & Ovl & Sens & Verdict \\
+\midrule
+CASE / hybrid & V6 & medium & -0.117 & 0.917 & 0.332 & tentative evidence for 2 states \\
+DREAMER / strict & V4 & high & 0.025 & 0.886 & 0.033 & tentative evidence for 2 states \\
+ds002722 / proxy & V1 & high & -2.410 & 0.212 & 0.057 & confidently 2 states, limited evidence for 3rd mode \\
+ds002722 / strict & V6 & high & 0.030 & 0.789 & 0.157 & tentative evidence for 2 states \\
+ds002724 / proxy & V2 & high & -2.693 & 0.174 & 0.058 & likely 3 states \\
+ds002724 / strict & V6 & high & -0.433 & 0.799 & 0.144 & confidently 2 states \\
+WESAD / hybrid & V6 & medium & -0.676 & 0.676 & 0.215 & confidently 2 states \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Что реально подтверждается по числу состояний}
+\begin{center}
+\begin{tabular}{p{2.8cm}p{0.8cm}p{4.2cm}p{1.3cm}p{6.0cm}}
+\toprule
+Scenario & V & Подтверждённое & Потолок & Примечание \\
+\midrule
+CASE / hybrid & V6 & tentative evidence for 2 states & k\ensuremath{\approx}3 & Внутренняя геометрия модели дробится минимум на два режима, но размеченные состояния пока не разделяются достаточно уверенно. \\
+WESAD / hybrid & V6 & confidently 2 states & k\ensuremath{\approx}2 & Бинарное разделение устойчиво подтверждается, а дополнительные режимы не получают достаточно сильной кластерной и попарной поддержки. \\
+ds002722 / strict & V6 & tentative evidence for 2 states & k\ensuremath{\approx}3 & Внутренняя геометрия модели дробится минимум на два режима, но размеченные состояния пока не разделяются достаточно уверенно. \\
+ds002722 / proxy & V1 & confidently 2 states, limited evidence for 3rd mode & k\ensuremath{\approx}2 & Есть намёки на переходный или промежуточный режим, но устойчивости недостаточно для честного подтверждения трёх состояний. \\
+ds002724 / strict & V6 & confidently 2 states & k\ensuremath{\approx}2 & Бинарное разделение устойчиво подтверждается, а дополнительные режимы не получают достаточно сильной кластерной и попарной поддержки. \\
+ds002724 / proxy & V2 & likely 3 states & k\ensuremath{\approx}3 & Третий режим поддерживается и попарной статистикой по меткам, и внутренней геометрией модели, но слабее первых двух. \\
+DREAMER / strict & V4 & tentative evidence for 2 states & k\ensuremath{\approx}2 & Внутренняя геометрия модели дробится минимум на два режима, но размеченные состояния пока не разделяются достаточно уверенно. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{V7 beta и Sumigron}
+\textbf{Зачем появился оператор.} Sumigron нужен как попытка переставить нелинейность раньше по цепочке: не сжимать окно в один ранний bounded-ответ, а сначала сохранить уровень, структуру и энергию.
+
+\textbf{Что делает V7 beta.} Архитектура \(\text{window} \to \sgop \to A,\Gamma,V,Q \to IIS,RES,DYN\) сохраняет gated-слой и трёхмерную интерпретацию, но меняет раннюю агрегацию.
+
+\textbf{Где уже дал пользу.} На части строгих сценариев и в synthetic-бенче Sumigron/V7 показывают осмысленный выигрыш.
+
+\textbf{Где пока не дал прорыва.} На DREAMER V7 полезна, но не делает резкого скачка по подтверждённому числу состояний; кроме того, для DREAMER уже используется dataset-specific override, поэтому версия ещё не универсальна.
+
+\section{Экспериментальные проверки}
+\subsection*{Dreamer V5 calibration}
+Current global objective: 0.342.\\
+Best candidate objective: 0.496.\\
+Калибровка V5 под DREAMER показывает, что часть выигрыша достигается именно доменной подстройкой нелинейных параметров.
+
+\subsection*{Dreamer V7 beta calibration}
+Candidate mode: global.\\
+Current global objective: 0.510.\\
+Best candidate objective: 0.523.\\
+Для V7 beta зафиксирован отдельный Dreamer-specific override; это улучшение локально, но не делает модель глобально универсальной.
+
+\subsection*{Synthetic Sumigron benchmark}
+Structure-driven / Sumigron \(\epsilon^2\): 0.635.\\
+Structure-driven / sigmoid \(\epsilon^2\): 0.012.\\
+Synthetic-бенч показывает, что Sumigron особенно силён там, где состояния различаются не только средним уровнем, но и структурой окна.
+
+\section{Ограничения и честные пометки}
+\begin{itemize}[leftmargin=1.2cm]
+\item \textbf{V1}: Сильно зависит от гормонального proxy-блока и плохо переносится в strict-режим. Ограничения: историческая версия, не универсальна, proxy-ориентирована, не адаптирована к динамике.
+\item \textbf{V2}: Остаётся завязанной на гормональный блок и в реальных strict-сценариях почти неработоспособна. Ограничения: историческая версия, не универсальна, proxy-ориентирована, не адаптирована к динамике.
+\item \textbf{V3}: Слишком тяжело опирается на proxy-нормировки и не подтверждается как универсальная практическая модель. Ограничения: историческая версия, не универсальна, proxy-ориентирована, не адаптирована к динамике.
+\item \textbf{V4}: Шкала ещё довольно плоская; промежуточные режимы часто сглаживаются. Ограничения: без специальных флагов.
+\item \textbf{V5}: Не универсальна по датасетам: на части наборов выигрывает, на части нет; чувствительна к калибровке. Ограничения: не универсальна.
+\item \textbf{V6}: Число базовых режимов зашито в gate-архитектуру; не всегда раскрывает более богатую карту состояний. Ограничения: без специальных флагов.
+\item \textbf{V7}: Пока beta-версия; есть dataset-specific override для DREAMER, поэтому она ещё не универсальна. Ограничения: не универсальна, dataset-specific calibration.
+\end{itemize}
+
+\textbf{DREAMER.} DREAMER полезен для выхода за грубые два режима, но пока остаётся слабым по подтверждённому числу состояний.
+
+\textbf{Sumigron.} Sumigron остаётся экспериментальным оператором: польза уже видна на synthetic и части V7-прогонов, но это ещё не финальная доказанная основа всей системы.
+
+\section{Заключение}
+\textbf{Текущая лучшая практическая версия.} V6 --- Gated-модель режимов.
+
+\textbf{Текущая лучшая теоретическая линия.} IISVersion7 + Sumigron.
+
+\textbf{Что остаётся гипотезой.} Подтверждение 3+ устойчивых состояний на разнородных наборах, а также финальная универсальность V7/Sumigron без dataset-specific override.
+
+\end{document}

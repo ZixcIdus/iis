@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.python-version
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local datasets and heavy generated artifacts
+data/
+outputs/
+temp/
+
+# Generated documentation artifacts
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.pdf
+docs/*.html
+*.aux
+*.log
+*.out
+
+# Legacy office documents
+*.docx

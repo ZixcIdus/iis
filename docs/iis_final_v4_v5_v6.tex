@@ -1,0 +1,481 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{array}
+
+\geometry{margin=2.2cm}
+
+\title{Финальные математические версии ИИС: V4, V5, V6}
+\author{Проект анализа интегрального индекса состояния}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Назначение документа}
+Настоящий документ фиксирует три актуальные негормональные математические версии модели ИИС:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \textbf{IISVersion4} --- базовая калиброванная физиологическая версия без гормонального блока;
+    \item \textbf{IISVersion5} --- контрастная нелинейная версия, уменьшающая плоскость шкалы;
+    \item \textbf{IISVersion6} --- универсальная gated-версия, моделирующая состояние как мягкую смесь нескольких режимов.
+\end{itemize}
+
+Во всех трёх версиях используются только реально измеряемые или допустимые для proxy-режима блоки:
+\[
+A,\ \Gamma,\ V,\ Q.
+\]
+Гормональные блоки \(H\) и \(K\) в этих версиях исключены.
+
+\section{Общие обозначения}
+Используются следующие обозначения:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \(P_L, P_R\) --- суммарная мощность левого и правого EEG-блоков;
+    \item \(\alpha_{\mathrm{asym}}\) --- alpha-asymmetry;
+    \item \(P_\gamma\) --- gamma power;
+    \item \(\gamma/\alpha\) --- gamma/alpha ratio;
+    \item \(HR\) --- heart rate;
+    \item \(HF/LF\) --- отношение высокочастотной и низкочастотной компонент HRV;
+    \item \(\sigma(x)=\dfrac{1}{1+e^{-x}}\) --- логистическая сигмоида;
+    \item \(\Gamma_+=\max(\Gamma,0)\);
+    \item \(V_+=\max(V,0)\);
+    \item \(\varepsilon>0\) --- малый стабилизирующий параметр.
+\end{itemize}
+
+Используется мягкая центрированная нормировка
+\[
+T(x;c,w)=\tanh\!\left(\frac{x-c}{w}\right),
+\]
+а также знако-сохраняющая степенная нелинейность
+\[
+\phi_p(x)=\operatorname{sign}(x)\,|x|^p.
+\]
+
+Для многорежимной версии используется softmax:
+\[
+\operatorname{softmax}(z_1,\dots,z_n)_i=
+\frac{e^{z_i}}{\sum_{j=1}^{n}e^{z_j}}.
+\]
+
+\section{Общие базовые компоненты}
+\subsection{Компонент \(A\)}
+Сначала alpha-асимметрия:
+\[
+A_{\alpha}=T(\alpha_{\mathrm{asym}};\ 0.000613,\ 0.000530).
+\]
+
+Затем суммарная межполушарная асимметрия:
+\[
+A_{\mathrm{total}}=
+T\!\left(
+\frac{P_L-P_R}{P_L+P_R+\varepsilon};\
+-0.0299,\ 0.0287
+\right).
+\]
+
+Итоговый компонент:
+\[
+A=\tanh\!\left(1.10\,A_{\alpha}+0.40\,A_{\mathrm{total}}\right).
+\]
+
+\subsection{Компонент \(\Gamma\)}
+Сначала gamma-мощность переводится в лог-шкалу:
+\[
+G_{\log}=\ln(1+P_\gamma\cdot 10^{12}).
+\]
+
+Далее:
+\[
+G_{\gamma}=T(G_{\log};\ 1.543,\ 0.850),
+\]
+\[
+G_{\gamma/\alpha}=T(\ln(1+\gamma/\alpha);\ 0.000367,\ 0.000434).
+\]
+
+Итоговый gamma-компонент:
+\[
+\Gamma=\tanh\!\left(0.30\,G_{\gamma}+0.70\,G_{\gamma/\alpha}\right).
+\]
+
+\subsection{Компонент \(V\)}
+Компонент по ЧСС:
+\[
+V_{hr}=T(118.740-HR;\ 0,\ 46.718).
+\]
+
+Компонент по HRV:
+\[
+V_{hrv}=T(\ln(1+HF/LF);\ 0.968,\ 1.222).
+\]
+
+Итоговый вегетативный компонент:
+\[
+V=\tanh\!\left(0.80\,V_{hr}+0.20\,V_{hrv}\right).
+\]
+
+\section{Версия IISVersion4}
+\subsection{Компонент \(Q_4\)}
+В версии 4 интегральное качество состояния считается как простая физиологическая интеграция:
+\[
+Q_4=\tanh\!\left(0.55A+0.45V-0.25\Gamma\right).
+\]
+
+В proxy-режиме используется мягкая якоризация на self-report:
+\[
+Q_{4,\mathrm{anchor}}=
+\tanh\!\left(
+2.2\left(
+0.62\,valence_{\mathrm{norm}}
+0.38(1-arousal_{\mathrm{norm}})
+-0.5
+\right)\right),
+\]
+\[
+Q_{4,\mathrm{proxy}}=0.65\,Q_4+0.35\,Q_{4,\mathrm{anchor}}.
+\]
+
+\subsection{Итоговый индекс \(IIS_4\)}
+Статическая формула версии 4:
+\[
+IIS_4=\sigma\!\left(0.10A-0.05\Gamma+0.25V+0.60Q_4\right).
+\]
+
+\section{Версия IISVersion5}
+\subsection{Компонент \(Q_5\)}
+В версии 5 компонент \(Q\) становится более нелинейным и учитывает не только сумму блоков, но и их согласованность.
+
+Линейное ядро:
+\[
+Q_{\mathrm{lin}}=0.50A+0.42V-0.30\Gamma.
+\]
+
+Когерентность:
+\[
+Q_{\mathrm{coh}}=A\cdot V-0.50|A-V|-0.18\Gamma_+.
+\]
+
+Нелинейно преобразованные переменные:
+\[
+\widehat{A}=\phi_{0.82}(A),\qquad
+\widehat{V}=\phi_{0.82}(V),\qquad
+\widehat{\Gamma}=\phi_{1.05}(\Gamma).
+\]
+
+Синергия:
+\[
+S_{AV}=\operatorname{sign}(\widehat{A}+\widehat{V})\sqrt{|\widehat{A}\widehat{V}|+\varepsilon}.
+\]
+
+Энергия:
+\[
+E_{AV}=\frac{|\widehat{A}|+|\widehat{V}|}{2}.
+\]
+
+Конфликт:
+\[
+C_{AV}=|\widehat{A}-\widehat{V}|+0.16\,\widehat{\Gamma}_+\,(1-\widehat{V}_+),
+\qquad
+\widehat{\Gamma}_+=\max(\widehat{\Gamma},0),\quad
+\widehat{V}_+=\max(\widehat{V},0).
+\]
+
+Итоговая формула:
+\[
+Q_5=
+\tanh\!\Bigl(
+1.4\,Q_{\mathrm{lin}}
+0.55\,Q_{\mathrm{coh}}
+0.42\,S_{AV}
+0.28\,E_{AV}\operatorname{sign}(Q_{\mathrm{lin}})
+-0.24\,C_{AV}
+\Bigr).
+\]
+
+В proxy-режиме:
+\[
+Q_{5,\mathrm{anchor}}=
+\tanh\!\left(
+2.4\left(
+0.65\,valence_{\mathrm{norm}}
+0.35(1-arousal_{\mathrm{norm}})
+-0.5
+\right)\right),
+\]
+\[
+Q_{5,\mathrm{proxy}}=0.75Q_5+0.25Q_{5,\mathrm{anchor}}.
+\]
+
+\subsection{Итоговый индекс \(IIS_5\)}
+Базовое линейное ядро:
+\[
+core_5=0.12A-0.07\Gamma+0.24V+0.57Q_5.
+\]
+
+Нелинейно преобразованные переменные:
+\[
+\widetilde{A}=\phi_{0.84}(A),\qquad
+\widetilde{V}=\phi_{0.84}(V),\qquad
+\widetilde{Q}=\phi_{0.84}(Q_5).
+\]
+
+Центрированное ядро:
+\[
+z_5=0.14\widetilde{A}-0.08\Gamma+0.22\widetilde{V}+0.56\widetilde{Q}-0.08.
+\]
+
+Синергия режимов:
+\[
+S_{\mathrm{reg}}=
+\operatorname{sign}(\widetilde{A}+\widetilde{V})\sqrt{|\widetilde{A}\widetilde{V}|+\varepsilon}
++0.8\,\operatorname{sign}(\widetilde{Q}+\widetilde{V})\sqrt{|\widetilde{Q}\widetilde{V}|+\varepsilon}.
+\]
+
+Энергия фазы:
+\[
+E_{\mathrm{phase}}=\sqrt{\frac{\widetilde{A}^2+\widetilde{V}^2+\widetilde{Q}^2}{3}}.
+\]
+
+Конфликт:
+\[
+C_{\mathrm{phase}}=|\widetilde{A}-\widetilde{V}|+0.75|\widetilde{Q}-\widetilde{V}|.
+\]
+
+Контрастный слой:
+\[
+\begin{aligned}
+contrast_5={}&
+2.6z_5
++0.8z_5^3
++0.18(Q_5-V)
+-0.06\Gamma_+ \\
+&+0.52S_{\mathrm{reg}}
++0.34E_{\mathrm{phase}}\operatorname{sign}(z_5)
+-0.22C_{\mathrm{phase}}
+-0.10\Gamma_+(1-V_+).
+\end{aligned}
+\]
+
+Базовая и контрастная части:
+\[
+IIS_{5,\mathrm{base}}=\sigma\!\left(core_5+0.22S_{\mathrm{reg}}-0.10C_{\mathrm{phase}}\right),
+\]
+\[
+IIS_{5,\mathrm{contrast}}=0.5+0.5\tanh(contrast_5).
+\]
+
+Финальная смесь:
+\[
+IIS_5=\operatorname{clip}\!\left(
+0.65\,IIS_{5,\mathrm{base}}+0.35\,IIS_{5,\mathrm{contrast}},
+0,1\right).
+\]
+
+\section{Версия IISVersion6}
+\subsection{Идея версии 6}
+Версия 6 интерпретирует состояние не как результат одной глобальной формулы, а как мягкую смесь трёх режимов:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \textbf{regulation} --- согласованное регулируемое состояние;
+    \item \textbf{mobilization} --- напряжённая мобилизация;
+    \item \textbf{depletion} --- истощающий режим.
+\end{itemize}
+
+\subsection{Нелинейно преобразованные компоненты}
+\[
+\widehat{A}=\phi_{0.78}(A),\qquad
+\widehat{V}=\phi_{0.78}(V),\qquad
+\widehat{\Gamma}=\phi_{1.05}(\Gamma),\qquad
+\widehat{Q}=\phi_{0.78}(Q_6),
+\]
+\[
+\widehat{\Gamma}_+=\max(\widehat{\Gamma},0).
+\]
+
+\subsection{Гейты для \(Q_6\)}
+Сначала вычисляются логиты режимов:
+\[
+z^{(Q)}_{\mathrm{reg}}=0.95\widehat{A}+1.05\widehat{V}-0.55\widehat{\Gamma}_+,
+\]
+\[
+z^{(Q)}_{\mathrm{mob}}=-0.18\widehat{A}+0.48\widehat{V}-1.05\widehat{\Gamma}_+,
+\]
+\[
+z^{(Q)}_{\mathrm{dep}}=-0.80\widehat{A}-0.95\widehat{V}+0.72\widehat{\Gamma}_+.
+\]
+
+Гейты:
+\[
+\bigl(g^{(Q)}_{\mathrm{reg}},g^{(Q)}_{\mathrm{mob}},g^{(Q)}_{\mathrm{dep}}\bigr)
+=
+\operatorname{softmax}\!\left(
+1.65\,z^{(Q)}_{\mathrm{reg}},
+1.65\,z^{(Q)}_{\mathrm{mob}},
+1.65\,z^{(Q)}_{\mathrm{dep}}
+\right).
+\]
+
+\subsection{Локальные уровни режима для \(Q_6\)}
+\[
+S_{AV}^{(6)}=\operatorname{sign}(\widehat{A}+\widehat{V})\sqrt{|\widehat{A}\widehat{V}|+\varepsilon}.
+\]
+
+\[
+q_{\mathrm{reg}}=
+0.76+0.18\tanh\!\left(
+1.10\widehat{A}+1.15\widehat{V}-0.45\widehat{\Gamma}_++0.30S_{AV}^{(6)}
+\right),
+\]
+\[
+q_{\mathrm{mob}}=
+0.50+0.14\tanh\!\left(
+0.10\widehat{A}+0.55\widehat{V}-1.20\widehat{\Gamma}_+
+\right),
+\]
+\[
+q_{\mathrm{dep}}=
+0.18+0.16\tanh\!\left(
+-0.65|\widehat{A}|-0.95|\widehat{V}|+0.95\widehat{\Gamma}_+
+\right).
+\]
+
+Итоговый \(Q_6\):
+\[
+Q_6=
+\operatorname{clip}\!\left(
+g^{(Q)}_{\mathrm{reg}}q_{\mathrm{reg}}
++g^{(Q)}_{\mathrm{mob}}q_{\mathrm{mob}}
++g^{(Q)}_{\mathrm{dep}}q_{\mathrm{dep}},
+0,1
+\right).
+\]
+
+В proxy-режиме:
+\[
+Q_{6,\mathrm{anchor}}=0.70\,valence_{\mathrm{norm}}+0.30(1-arousal_{\mathrm{norm}}),
+\]
+\[
+Q_{6,\mathrm{proxy}}=0.82Q_6+0.18Q_{6,\mathrm{anchor}}.
+\]
+
+\subsection{Гейты итогового индекса \(IIS_6\)}
+Логиты итоговых режимов:
+\[
+z_{\mathrm{reg}}=0.60\widehat{Q}+0.45\widehat{V}+0.15\widehat{A}-0.30\widehat{\Gamma}_+,
+\]
+\[
+z_{\mathrm{mob}}=-0.05\widehat{Q}+0.20\widehat{V}-0.55\widehat{\Gamma}_+-0.08\widehat{A},
+\]
+\[
+z_{\mathrm{dep}}=-0.70\widehat{Q}-0.55\widehat{V}-0.20\widehat{A}+0.35\widehat{\Gamma}_+.
+\]
+
+\[
+\bigl(g_{\mathrm{reg}},g_{\mathrm{mob}},g_{\mathrm{dep}}\bigr)=
+\operatorname{softmax}\!\left(
+1.65\,z_{\mathrm{reg}},
+1.65\,z_{\mathrm{mob}},
+1.65\,z_{\mathrm{dep}}
+\right).
+\]
+
+\subsection{Локальные уровни режима}
+\[
+S_{QV}^{(6)}=\operatorname{sign}(\widehat{Q}+\widehat{V})\sqrt{|\widehat{Q}\widehat{V}|+\varepsilon},
+\]
+\[
+C_{QV}^{(6)}=|\widehat{A}-\widehat{V}|+0.75|\widehat{Q}-\widehat{V}|.
+\]
+
+\[
+i_{\mathrm{reg}}=
+0.80+0.16\tanh\!\left(
+0.75\widehat{Q}+0.55\widehat{V}+0.18\widehat{A}-0.25\widehat{\Gamma}_++0.25S_{QV}^{(6)}
+\right),
+\]
+\[
+i_{\mathrm{mob}}=
+0.54+0.12\tanh\!\left(
+-0.08\widehat{Q}+0.32\widehat{V}-0.52\widehat{\Gamma}_++0.08\widehat{A}
+\right),
+\]
+\[
+i_{\mathrm{dep}}=
+0.20+0.16\tanh\!\left(
+-0.62\widehat{Q}-0.52\widehat{V}-0.18\widehat{A}+0.38\widehat{\Gamma}_+
+\right).
+\]
+
+Промежуточная смесь:
+\[
+R_6=
+g_{\mathrm{reg}}i_{\mathrm{reg}}
++g_{\mathrm{mob}}i_{\mathrm{mob}}
++g_{\mathrm{dep}}i_{\mathrm{dep}}.
+\]
+
+\subsection{Энтропия переходности и финальная формула}
+Нормированная энтропия гейта:
+\[
+H(g)=
+-\frac{g_{\mathrm{reg}}\ln g_{\mathrm{reg}}
++g_{\mathrm{mob}}\ln g_{\mathrm{mob}}
++g_{\mathrm{dep}}\ln g_{\mathrm{dep}}}{\ln 3}.
+\]
+
+Баланс между regulation и depletion:
+\[
+B_6=g_{\mathrm{reg}}-g_{\mathrm{dep}}.
+\]
+
+Итоговый индекс:
+\[
+IIS_6=
+\operatorname{clip}\!\left(
+R_6
+-0.08\,H(g)
++0.05\,B_6
+-0.10\,C_{QV}^{(6)},
+0,1
+\right).
+\]
+
+Для служебной диагностики также используется вспомогательное ядро:
+\[
+raw_6=0.14\widehat{A}-0.08\widehat{\Gamma}+0.24\widehat{V}+0.54\widehat{Q}.
+\]
+
+\section{Краткая интерпретация трёх версий}
+\begin{center}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{4.2cm} >{\raggedright\arraybackslash}p{7.2cm}}
+\toprule
+Версия & Основная идея & Главная особенность \\
+\midrule
+V4 & Базовая негормональная физиологическая версия & Почти минимальная и хорошо интерпретируемая формула, удобная как опорная модель \\
+V5 & Контрастная нелинейная версия & Усиливает середину и края шкалы, лучше раскрывает геометрию без смены архитектуры \\
+V6 & Универсальная gated-версия & Моделирует состояние как мягкую смесь режимов regulation, mobilization и depletion \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Итог}
+Формально версии \(V4\), \(V5\) и \(V6\) образуют последовательность:
+\[
+\text{простая физиологическая интеграция}
+\;\longrightarrow\;
+\text{контрастная нелинейная интеграция}
+\;\longrightarrow\;
+\text{мягкая многорежимная gated-модель}.
+\]
+
+Таким образом:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \textbf{V4} --- базовый калиброванный эталон;
+    \item \textbf{V5} --- шаг к более богатой нелинейной геометрии;
+    \item \textbf{V6} --- наиболее универсальная тестовая архитектура среди текущих негормональных версий.
+\end{itemize}
+
+\end{document}

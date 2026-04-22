@@ -1,0 +1,675 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{pdflscape}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\geometry{margin=2.0cm}
+\setlength{\LTpre}{0pt}
+\setlength{\LTpost}{0pt}
+
+\newcommand{\sgn}{\operatorname{sign}}
+\newcommand{\clip}{\operatorname{clip}}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\Tnorm}[3]{\tanh\!\left(\frac{#1-#2}{#3}\right)}
+\newcommand{\spow}[2]{\sgn(#1)\lvert #1 \rvert^{#2}}
+
+\title{Полный свод формул ИИС: V3, V4, V5, V6}
+\author{Проект анализа интегрального индекса состояния}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Назначение документа}
+Этот документ сводит в один файл четыре версии модели ИИС:
+\[
+V3,\ V4,\ V5,\ V6.
+\]
+Формулы разделены на три слоя:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item \textbf{Теоретические} --- структура модели без привязки к конкретным числам калибровки.
+    \item \textbf{Практические} --- точные формулы, реально использующиеся в коде для прямых данных.
+    \item \textbf{Практико-ориентированные (proxy)} --- формулы, которые включаются при отсутствии части прямых измерений.
+\end{enumerate}
+
+\section{Общие обозначения}
+\[
+\sigma(x)=\frac{1}{1+e^{-x}}, \qquad
+\Gamma_+=\max(\Gamma,0), \qquad
+V_+=\max(V,0).
+\]
+
+\[
+\spow{x}{p}=\sgn(x)\lvert x \rvert^p,
+\qquad
+\softmax(z_1,\dots,z_n)_i=\frac{e^{z_i}}{\sum_{j=1}^{n}e^{z_j}}.
+\]
+
+\[
+\Tnorm{x}{c}{w}=\tanh\!\left(\frac{x-c}{w}\right).
+\]
+
+Базовые физиологические признаки:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \(P_L, P_R\) --- суммарная мощность левого и правого EEG-блоков;
+    \item \(\alpha_{\mathrm{asym}}\) --- alpha-asymmetry;
+    \item \(P_\gamma\) --- gamma power;
+    \item \(\gamma/\alpha\) --- gamma/alpha ratio;
+    \item \(HR\) --- heart rate;
+    \item \(HF/LF\) --- отношение компонент HRV;
+    \item \(DA\) --- дофаминовый вклад или его proxy;
+    \item \(C\) --- кортизоловый вклад или его proxy.
+\end{itemize}
+
+\section{Теоретические модели}
+\begin{landscape}
+\small
+\begin{longtable}{>{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}p{16.7cm}}
+\toprule
+\textbf{Версия} & \textbf{Теоретическая формула} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Версия} & \textbf{Теоретическая формула} \\
+\midrule
+\endhead
+
+\textbf{V3} &
+\[
+A=\frac{N_L-N_R}{N_L+N_R+\varepsilon},
+\qquad
+\Gamma=\ln(1+P_\gamma \cdot 10^{12}),
+\qquad
+V=\ln\!\left(1+\frac{HF}{LF}\right).
+\]
+\[
+Q_{\mathrm{raw}}=\frac{\alpha_L-\alpha_R}{\alpha_L+\alpha_R+\varepsilon},
+\qquad
+Q=\tanh(\beta_q Q_{\mathrm{raw}}).
+\]
+\[
+K=\frac{R\cdot G}{1+\alpha S^2+\beta F(S)},
+\qquad
+F(S)=\frac{1}{1+e^{-k_f(S-S_0)}}.
+\]
+\[
+H=\frac{K\cdot DA}{50}-\frac{C}{15}.
+\]
+\[
+IIS_3=\sigma\!\left(0.35A+0.25\Gamma+0.30H+0.10V\right).
+\]
+Смысл версии: сохранить старое ядро ИИС, но сделать гормональный блок зависящим от коэффициента проницаемости \(K\). \\
+
+\textbf{V4} &
+\[
+A=\tanh\!\left(
+1.10\,\Tnorm{\alpha_{\mathrm{asym}}}{c_\alpha}{w_\alpha}
+0.40\,\Tnorm{\dfrac{P_L-P_R}{P_L+P_R+\varepsilon}}{c_A}{w_A}
+\right).
+\]
+\[
+\Gamma=\tanh\!\left(
+0.30\,\Tnorm{\ln(1+P_\gamma\cdot 10^{12})}{c_\gamma}{w_\gamma}
+0.70\,\Tnorm{\ln(1+\gamma/\alpha)}{c_{\gamma/\alpha}}{w_{\gamma/\alpha}}
+\right).
+\]
+\[
+V=\tanh\!\left(
+0.80\,\Tnorm{HR_0-HR}{0}{w_{hr}}
+0.20\,\Tnorm{\ln(1+HF/LF)}{c_{v}}{w_{v}}
+\right).
+\]
+\[
+Q_4=\tanh\!\left(0.55A+0.45V-0.25\Gamma\right).
+\]
+\[
+IIS_4=\sigma\!\left(0.10A-0.05\Gamma+0.25V+0.60Q_4\right).
+\]
+Смысл версии: полностью убрать гормоны и оставить только реально измеряемое EEG/ECG-ядро. \\
+
+\textbf{V5} &
+\[
+\widehat{A}=\spow{A}{p_q}, \qquad
+\widehat{V}=\spow{V}{p_q}, \qquad
+\widehat{\Gamma}=\spow{\Gamma}{p_\gamma}.
+\]
+\[
+Q_{\mathrm{lin}}=a_1A+a_2V-a_3\Gamma,
+\qquad
+Q_{\mathrm{coh}}=AV-b_1|A-V|-b_2\Gamma_+.
+\]
+\[
+S_{AV}=\sgn(\widehat{A}+\widehat{V})\sqrt{|\widehat{A}\widehat{V}|+\varepsilon},
+\qquad
+E_{AV}=\frac{|\widehat{A}|+|\widehat{V}|}{2}.
+\]
+\[
+C_{AV}=|\widehat{A}-\widehat{V}|+b_3\widehat{\Gamma}_+(1-\widehat{V}_+).
+\]
+\[
+Q_5=\tanh\!\left(
+\lambda_1 Q_{\mathrm{lin}}+
+\lambda_2 Q_{\mathrm{coh}}+
+\lambda_3 S_{AV}+
+\lambda_4 E_{AV}\sgn(Q_{\mathrm{lin}})-
+\lambda_5 C_{AV}
+\right).
+\]
+\[
+\widetilde{A}=\spow{A}{p_i},\qquad
+\widetilde{V}=\spow{V}{p_i},\qquad
+\widetilde{Q}=\spow{Q_5}{p_i}.
+\]
+\[
+z_5=
+r_1\widetilde{A}
+r_2\widetilde{V}
+r_3\widetilde{Q}
+r_4\Gamma-c_0.
+\]
+\[
+S_{\mathrm{reg}}=
+\sgn(\widetilde{A}+\widetilde{V})\sqrt{|\widetilde{A}\widetilde{V}|+\varepsilon}
+\eta\,
+\sgn(\widetilde{Q}+\widetilde{V})\sqrt{|\widetilde{Q}\widetilde{V}|+\varepsilon}.
+\]
+\[
+E_{\mathrm{phase}}=\sqrt{\frac{\widetilde{A}^2+\widetilde{V}^2+\widetilde{Q}^2}{3}},
+\qquad
+C_{\mathrm{phase}}=|\widetilde{A}-\widetilde{V}|+\xi|\widetilde{Q}-\widetilde{V}|.
+\]
+\[
+contrast_5=
+g_1 z_5
+g_2 z_5^3
+g_3(Q_5-V)
+g_4 S_{\mathrm{reg}}
+g_5 E_{\mathrm{phase}}\sgn(z_5)
+g_6 \Gamma_+
+g_7 C_{\mathrm{phase}}
+g_8 \Gamma_+(1-V_+).
+\]
+\[
+IIS_{5,\mathrm{base}}=\sigma\!\left(core_5+\mu_1 S_{\mathrm{reg}}-\mu_2 C_{\mathrm{phase}}\right),
+\qquad
+IIS_{5,\mathrm{contrast}}=0.5+0.5\tanh(contrast_5).
+\]
+\[
+IIS_5=\clip\!\left((1-m)IIS_{5,\mathrm{base}}+mIIS_{5,\mathrm{contrast}},0,1\right).
+\]
+Смысл версии: сделать шкалу менее плоской и раскрыть режимную геометрию без гормонов. \\
+
+\textbf{V6} &
+\[
+\widehat{A}=\spow{A}{p}, \qquad
+\widehat{V}=\spow{V}{p}, \qquad
+\widehat{\Gamma}=\spow{\Gamma}{p_\gamma}, \qquad
+\widehat{Q}=\spow{Q_6}{p}.
+\]
+\[
+z^{(Q)}_{\mathrm{reg}}=u_1\widehat{A}+u_2\widehat{V}-u_3\widehat{\Gamma}_+,
+\]
+\[
+z^{(Q)}_{\mathrm{mob}}=u_4\widehat{A}+u_5\widehat{V}-u_6\widehat{\Gamma}_+,
+\]
+\[
+z^{(Q)}_{\mathrm{dep}}=-u_7\widehat{A}-u_8\widehat{V}+u_9\widehat{\Gamma}_+.
+\]
+\[
+\bigl(g^{(Q)}_{\mathrm{reg}},g^{(Q)}_{\mathrm{mob}},g^{(Q)}_{\mathrm{dep}}\bigr)
+=\softmax\!\left(\tau_Q z^{(Q)}_{\mathrm{reg}},\tau_Q z^{(Q)}_{\mathrm{mob}},\tau_Q z^{(Q)}_{\mathrm{dep}}\right).
+\]
+\[
+Q_6=
+g^{(Q)}_{\mathrm{reg}}q_{\mathrm{reg}}
++g^{(Q)}_{\mathrm{mob}}q_{\mathrm{mob}}
++g^{(Q)}_{\mathrm{dep}}q_{\mathrm{dep}},
+\]
+где \(q_{\mathrm{reg}}, q_{\mathrm{mob}}, q_{\mathrm{dep}}\) --- локальные уровни трёх режимов.
+\[
+z_{\mathrm{reg}}=v_1\widehat{Q}+v_2\widehat{V}+v_3\widehat{A}-v_4\widehat{\Gamma}_+,
+\]
+\[
+z_{\mathrm{mob}}=v_5\widehat{Q}+v_6\widehat{V}-v_7\widehat{\Gamma}_+-v_8\widehat{A},
+\]
+\[
+z_{\mathrm{dep}}=-v_9\widehat{Q}-v_{10}\widehat{V}-v_{11}\widehat{A}+v_{12}\widehat{\Gamma}_+.
+\]
+\[
+\bigl(g_{\mathrm{reg}},g_{\mathrm{mob}},g_{\mathrm{dep}}\bigr)
+=\softmax\!\left(\tau_I z_{\mathrm{reg}},\tau_I z_{\mathrm{mob}},\tau_I z_{\mathrm{dep}}\right).
+\]
+\[
+R_6=g_{\mathrm{reg}}i_{\mathrm{reg}}+g_{\mathrm{mob}}i_{\mathrm{mob}}+g_{\mathrm{dep}}i_{\mathrm{dep}}.
+\]
+\[
+H(g)=-
+\frac{
+g_{\mathrm{reg}}\ln g_{\mathrm{reg}}+
+g_{\mathrm{mob}}\ln g_{\mathrm{mob}}+
+g_{\mathrm{dep}}\ln g_{\mathrm{dep}}
+}{\ln 3}.
+\]
+\[
+B_6=g_{\mathrm{reg}}-g_{\mathrm{dep}}.
+\]
+\[
+IIS_6=\clip\!\left(R_6-\lambda_H H(g)+\lambda_B B_6-\lambda_C C_{QV},0,1\right).
+\]
+Смысл версии: не один скалярный режим, а мягкая смесь трёх режимов: regulation, mobilization, depletion. \\
+
+\bottomrule
+\end{longtable}
+\end{landscape}
+
+\section{Практические модели}
+\begin{landscape}
+\small
+\begin{longtable}{>{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}p{16.7cm}}
+\toprule
+\textbf{Версия} & \textbf{Точная практическая формула из кода} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Версия} & \textbf{Точная практическая формула из кода} \\
+\midrule
+\endhead
+
+\textbf{V3} &
+\[
+A=\frac{N_L-N_R}{N_L+N_R+\varepsilon},
+\qquad
+\Gamma=\ln(1+P_\gamma\cdot 10^{12}),
+\qquad
+V=\ln\!\left(1+\frac{HF}{LF}\right).
+\]
+\[
+Q=\tanh(2.0\,Q_{\mathrm{raw}}),
+\qquad
+Q_{\mathrm{raw}}=\frac{\alpha_L-\alpha_R}{\alpha_L+\alpha_R+\varepsilon}.
+\]
+\[
+K=\frac{R\cdot G}{1+1.2S^2+0.24F(S)},
+\qquad
+F(S)=\frac{1}{1+e^{-5.0(S-0.6)}}.
+\]
+\[
+H=\frac{K\cdot DA}{50}-\frac{C}{15},
+\qquad
+IIS_3=\sigma\!\left(0.35A+0.25\Gamma+0.30H+0.10V\right).
+\]
+\textbf{Практическое ограничение:} в строгом режиме на открытых датасетах версия не является полностью direct-моделью, потому что \(DA\) и \(C\) напрямую не измеряются. \\
+
+\textbf{V4} &
+\[
+A=\tanh\!\left(
+1.10\,\Tnorm{\alpha_{\mathrm{asym}}}{0.0006126059}{0.0005296437}
+0.40\,\Tnorm{\dfrac{P_L-P_R}{P_L+P_R+\varepsilon}}{-0.0298851838}{0.0287095439}
+\right).
+\]
+\[
+\Gamma=\tanh\!\left(
+0.30\,\Tnorm{\ln(1+P_\gamma\cdot 10^{12})}{1.5434688676}{0.8496713487}
+0.70\,\Tnorm{\ln(1+\gamma/\alpha)}{0.0003674267}{0.0004343448}
+\right).
+\]
+\[
+V=\tanh\!\left(
+0.80\,\Tnorm{118.7401955561-HR}{0}{46.7184548147}
+0.20\,\Tnorm{\ln(1+HF/LF)}{0.9675457417}{1.2220370049}
+\right).
+\]
+\[
+Q_4=\tanh\!\left(0.55A+0.45V-0.25\Gamma\right).
+\]
+\[
+IIS_4=\sigma\!\left(0.10A-0.05\Gamma+0.25V+0.60Q_4\right).
+\]
+\textbf{Практическое ограничение:} если доступна только ЧСС или только \(HF/LF\), блок \(V\) упрощается до доступной части. \\
+
+\textbf{V5} &
+\[
+\widehat{A}=\spow{A}{0.82},\qquad
+\widehat{V}=\spow{V}{0.82},\qquad
+\widehat{\Gamma}=\spow{\Gamma}{1.05}.
+\]
+\[
+Q_{\mathrm{lin}}=0.50A+0.42V-0.30\Gamma,
+\qquad
+Q_{\mathrm{coh}}=AV-0.50|A-V|-0.18\Gamma_+.
+\]
+\[
+S_{AV}=\sgn(\widehat{A}+\widehat{V})\sqrt{|\widehat{A}\widehat{V}|+\varepsilon},
+\qquad
+E_{AV}=\frac{|\widehat{A}|+|\widehat{V}|}{2},
+\]
+\[
+C_{AV}=|\widehat{A}-\widehat{V}|+0.16\widehat{\Gamma}_+(1-\widehat{V}_+).
+\]
+\[
+Q_5=\tanh\!\left(
+1.4Q_{\mathrm{lin}}+0.55Q_{\mathrm{coh}}+0.42S_{AV}+0.28E_{AV}\sgn(Q_{\mathrm{lin}})-0.24C_{AV}
+\right).
+\]
+\[
+\widetilde{A}=\spow{A}{0.84},\qquad
+\widetilde{V}=\spow{V}{0.84},\qquad
+\widetilde{Q}=\spow{Q_5}{0.84}.
+\]
+\[
+z_5=0.14\widetilde{A}-0.08\Gamma+0.22\widetilde{V}+0.56\widetilde{Q}-0.08.
+\]
+\[
+S_{\mathrm{reg}}=
+\sgn(\widetilde{A}+\widetilde{V})\sqrt{|\widetilde{A}\widetilde{V}|+\varepsilon}
++0.8\,\sgn(\widetilde{Q}+\widetilde{V})\sqrt{|\widetilde{Q}\widetilde{V}|+\varepsilon}.
+\]
+\[
+E_{\mathrm{phase}}=\sqrt{\frac{\widetilde{A}^2+\widetilde{V}^2+\widetilde{Q}^2}{3}},
+\qquad
+C_{\mathrm{phase}}=|\widetilde{A}-\widetilde{V}|+0.75|\widetilde{Q}-\widetilde{V}|.
+\]
+\[
+contrast_5=
+2.6z_5+0.8z_5^3+0.18(Q_5-V)-0.06\Gamma_+
++0.52S_{\mathrm{reg}}+0.34E_{\mathrm{phase}}\sgn(z_5)-0.22C_{\mathrm{phase}}-0.10\Gamma_+(1-V_+).
+\]
+\[
+IIS_{5,\mathrm{base}}=\sigma\!\left(core_5+0.22S_{\mathrm{reg}}-0.10C_{\mathrm{phase}}\right),
+\qquad
+core_5=0.12A-0.07\Gamma+0.24V+0.57Q_5.
+\]
+\[
+IIS_{5,\mathrm{contrast}}=0.5+0.5\tanh(contrast_5).
+\]
+\[
+IIS_5=\clip\!\left(0.65IIS_{5,\mathrm{base}}+0.35IIS_{5,\mathrm{contrast}},0,1\right).
+\]
+\textbf{Практическая цель:} убрать плоскость шкалы и усилить геометрию режимов без гормонов. \\
+
+\textbf{V6} &
+\[
+\widehat{A}=\spow{A}{0.78},\qquad
+\widehat{V}=\spow{V}{0.78},\qquad
+\widehat{\Gamma}=\spow{\Gamma}{1.05},\qquad
+\widehat{Q}=\spow{Q_6}{0.78}.
+\]
+\[
+z^{(Q)}_{\mathrm{reg}}=0.95\widehat{A}+1.05\widehat{V}-0.55\widehat{\Gamma}_+,
+\]
+\[
+z^{(Q)}_{\mathrm{mob}}=-0.18\widehat{A}+0.48\widehat{V}-1.05\widehat{\Gamma}_+,
+\]
+\[
+z^{(Q)}_{\mathrm{dep}}=-0.80\widehat{A}-0.95\widehat{V}+0.72\widehat{\Gamma}_+.
+\]
+\[
+\bigl(g^{(Q)}_{\mathrm{reg}},g^{(Q)}_{\mathrm{mob}},g^{(Q)}_{\mathrm{dep}}\bigr)
+=\softmax\!\left(
+1.65 z^{(Q)}_{\mathrm{reg}},
+1.65 z^{(Q)}_{\mathrm{mob}},
+1.65 z^{(Q)}_{\mathrm{dep}}
+\right).
+\]
+\[
+S_{AV}^{(6)}=\sgn(\widehat{A}+\widehat{V})\sqrt{|\widehat{A}\widehat{V}|+\varepsilon}.
+\]
+\[
+q_{\mathrm{reg}}=0.76+0.18\tanh\!\left(1.10\widehat{A}+1.15\widehat{V}-0.45\widehat{\Gamma}_++0.30S_{AV}^{(6)}\right),
+\]
+\[
+q_{\mathrm{mob}}=0.50+0.14\tanh\!\left(0.10\widehat{A}+0.55\widehat{V}-1.20\widehat{\Gamma}_+\right),
+\]
+\[
+q_{\mathrm{dep}}=0.18+0.16\tanh\!\left(-0.65|\widehat{A}|-0.95|\widehat{V}|+0.95\widehat{\Gamma}_+\right).
+\]
+\[
+Q_6=\clip\!\left(
+g^{(Q)}_{\mathrm{reg}}q_{\mathrm{reg}}+
+g^{(Q)}_{\mathrm{mob}}q_{\mathrm{mob}}+
+g^{(Q)}_{\mathrm{dep}}q_{\mathrm{dep}},
+0,1\right).
+\]
+\[
+z_{\mathrm{reg}}=0.60\widehat{Q}+0.45\widehat{V}+0.15\widehat{A}-0.30\widehat{\Gamma}_+,
+\]
+\[
+z_{\mathrm{mob}}=-0.05\widehat{Q}+0.20\widehat{V}-0.55\widehat{\Gamma}_+-0.08\widehat{A},
+\]
+\[
+z_{\mathrm{dep}}=-0.70\widehat{Q}-0.55\widehat{V}-0.20\widehat{A}+0.35\widehat{\Gamma}_+.
+\]
+\[
+\bigl(g_{\mathrm{reg}},g_{\mathrm{mob}},g_{\mathrm{dep}}\bigr)
+=\softmax\!\left(1.65z_{\mathrm{reg}},1.65z_{\mathrm{mob}},1.65z_{\mathrm{dep}}\right).
+\]
+\[
+S_{QV}^{(6)}=\sgn(\widehat{Q}+\widehat{V})\sqrt{|\widehat{Q}\widehat{V}|+\varepsilon},
+\qquad
+C_{QV}^{(6)}=|\widehat{A}-\widehat{V}|+0.75|\widehat{Q}-\widehat{V}|.
+\]
+\[
+i_{\mathrm{reg}}=
+0.80+0.16\tanh\!\left(
+0.75\widehat{Q}+0.55\widehat{V}+0.18\widehat{A}-0.25\widehat{\Gamma}_++0.25S_{QV}^{(6)}
+\right),
+\]
+\[
+i_{\mathrm{mob}}=
+0.54+0.12\tanh\!\left(
+-0.08\widehat{Q}+0.32\widehat{V}-0.52\widehat{\Gamma}_++0.08\widehat{A}
+\right),
+\]
+\[
+i_{\mathrm{dep}}=
+0.20+0.16\tanh\!\left(
+-0.62\widehat{Q}-0.52\widehat{V}-0.18\widehat{A}+0.38\widehat{\Gamma}_+
+\right).
+\]
+\[
+R_6=g_{\mathrm{reg}}i_{\mathrm{reg}}+g_{\mathrm{mob}}i_{\mathrm{mob}}+g_{\mathrm{dep}}i_{\mathrm{dep}}.
+\]
+\[
+H(g)=-
+\frac{
+g_{\mathrm{reg}}\ln g_{\mathrm{reg}}+
+g_{\mathrm{mob}}\ln g_{\mathrm{mob}}+
+g_{\mathrm{dep}}\ln g_{\mathrm{dep}}
+}{\ln 3},
+\qquad
+B_6=g_{\mathrm{reg}}-g_{\mathrm{dep}}.
+\]
+\[
+IIS_6=\clip\!\left(
+R_6-0.08H(g)+0.05B_6-0.10C_{QV}^{(6)},
+0,1\right).
+\]
+\[
+raw_6=0.14\widehat{A}-0.08\widehat{\Gamma}+0.24\widehat{V}+0.54\widehat{Q}.
+\]
+\textbf{Практическая цель:} уйти от одной почти линейной формулы к мягкой смеси трёх режимов. \\
+
+\bottomrule
+\end{longtable}
+\end{landscape}
+
+\section{Практико-ориентированные (proxy) модели}
+\begin{landscape}
+\small
+\begin{longtable}{>{\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}p{16.7cm}}
+\toprule
+\textbf{Версия} & \textbf{Proxy-формула и её смысл} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Версия} & \textbf{Proxy-формула и её смысл} \\
+\midrule
+\endhead
+
+\textbf{V3} &
+\[
+R=
+\begin{cases}
+\dfrac{HF/LF}{1+HF/LF}, & \text{если доступно } HF/LF,\\[4pt]
+\dfrac{HF}{1+HF}, & \text{если доступно только } HF,
+\end{cases}
+\]
+\[
+G=\frac{\ln(1+P_\gamma\cdot 10^{12})}{1+\ln(1+P_\gamma\cdot 10^{12})},
+\qquad
+S=\clip\!\left(\frac{C_{\mathrm{proxy}}-8}{25-8},0,1\right),
+\]
+\[
+F(S)=\frac{1}{1+e^{-5.0(S-0.6)}},
+\qquad
+K=\frac{R\cdot G}{1+1.2S^2+0.24F(S)}.
+\]
+\[
+H_{\mathrm{proxy}}=\frac{K\cdot DA_{\mathrm{proxy}}}{50}-\frac{C_{\mathrm{proxy}}}{15}.
+\]
+\[
+IIS_{3,\mathrm{proxy}}=\sigma\!\left(0.35A+0.25\Gamma+0.30H_{\mathrm{proxy}}+0.10V\right).
+\]
+Здесь \(DA_{\mathrm{proxy}}\) и \(C_{\mathrm{proxy}}\) берутся из self-report, stress-меток и нормированных косвенных признаков. \\
+
+\textbf{V4} &
+\[
+Q_{4,\mathrm{anchor}}=
+\tanh\!\left(
+2.2\left(
+0.62\,valence_{\mathrm{norm}}+0.38(1-arousal_{\mathrm{norm}})-0.5
+\right)\right).
+\]
+\[
+Q_{4,\mathrm{proxy}}=0.65Q_4+0.35Q_{4,\mathrm{anchor}}.
+\]
+\[
+IIS_{4,\mathrm{proxy}}=\sigma\!\left(0.10A-0.05\Gamma+0.25V+0.60Q_{4,\mathrm{proxy}}\right).
+\]
+Proxy здесь не заменяет физиологию целиком, а только мягко якорит \(Q\) к реальным valence/arousal. \\
+
+\textbf{V5} &
+\[
+Q_{5,\mathrm{anchor}}=
+\tanh\!\left(
+2.4\left(
+0.65\,valence_{\mathrm{norm}}+0.35(1-arousal_{\mathrm{norm}})-0.5
+\right)\right).
+\]
+\[
+Q_{5,\mathrm{proxy}}=0.75Q_5+0.25Q_{5,\mathrm{anchor}}.
+\]
+\[
+IIS_{5,\mathrm{proxy}}=
+\clip\!\left(
+0.65IIS_{5,\mathrm{base}}(Q_{5,\mathrm{proxy}})
++0.35IIS_{5,\mathrm{contrast}}(Q_{5,\mathrm{proxy}}),
+0,1\right).
+\]
+Proxy-вклад уменьшен по сравнению с V4, чтобы не разрушать собственную геометрию нелинейной модели. \\
+
+\textbf{V6} &
+\[
+Q_{6,\mathrm{anchor}}=
+0.70\,valence_{\mathrm{norm}}+0.30(1-arousal_{\mathrm{norm}}).
+\]
+\[
+Q_{6,\mathrm{proxy}}=0.82Q_6+0.18Q_{6,\mathrm{anchor}}.
+\]
+\[
+\widehat{Q}_{\mathrm{proxy}}=\spow{Q_{6,\mathrm{proxy}}}{0.78}.
+\]
+Дальше вся gated-структура версии 6 пересчитывается уже с \(Q_{6,\mathrm{proxy}}\):
+\[
+IIS_{6,\mathrm{proxy}}=
+\clip\!\left(
+R_6(Q_{6,\mathrm{proxy}})
+-0.08H(g)
++0.05B_6
+-0.10C_{QV}^{(6)}(Q_{6,\mathrm{proxy}}),
+0,1\right).
+\]
+Proxy-режим V6 оставляет архитектуру режимов, но слегка подтягивает \(Q\) к внешним оценкам состояния. \\
+
+\bottomrule
+\end{longtable}
+\end{landscape}
+
+\section{Приложение: динамический слой поверх версий V4--V6}
+Текущая динамика в проекте строится \textbf{поверх} статического IIS и не меняет базовую формулу версии. Для окна \(t\):
+\[
+\overline{I}_t=\operatorname{rolling\_mean}(IIS_{1:t}),
+\qquad
+\widetilde{I}_t=\operatorname{rolling\_median}(IIS_{1:t}),
+\]
+\[
+I^{\mathrm{ewma}}_t=\operatorname{EWMA}_{\alpha=0.35}(IIS_{1:t}),
+\qquad
+I^{\mathrm{fast}}_t=\operatorname{EWMA}_{\alpha=0.42}(IIS_{1:t}).
+\]
+\[
+vol_t=\operatorname{rolling\_mean}\bigl(|IIS_t-IIS_{t-1}|\bigr).
+\]
+\[
+w_t=\clip\!\left(\frac{vol_t}{0.035},\,0.10,\,0.70\right).
+\]
+\[
+core_t=0.60\,I^{\mathrm{fast}}_t+0.40\,\widetilde{I}_t.
+\]
+\[
+target_t=(1-w_t)\,IIS_t+w_t\,core_t.
+\]
+\[
+stress_t=0.45\frac{\Gamma_t+1}{2}+0.35\frac{1-V_t}{2}+0.20\frac{1-Q_t}{2}.
+\]
+\[
+\alpha^{\mathrm{resp}}_t=\clip\!\left(0.48+0.22\,stress_t+0.10\,\frac{vol_t}{0.035},\,0.08,\,0.85\right),
+\]
+\[
+\alpha^{\mathrm{rec}}_t=\clip\!\left(0.12+0.10(1-stress_t)-0.04\,\frac{vol_t}{0.035},\,0.08,\,0.85\right).
+\]
+\[
+IIS^{\mathrm{dyn}}_t=
+\begin{cases}
+IIS_t, & t=1,\\[4pt]
+IIS^{\mathrm{dyn}}_{t-1}+\alpha_t\bigl(target_t-IIS^{\mathrm{dyn}}_{t-1}\bigr), & t>1,
+\end{cases}
+\]
+где
+\[
+\alpha_t=
+\begin{cases}
+\alpha^{\mathrm{resp}}_t, & target_t\le IIS^{\mathrm{dyn}}_{t-1},\\[4pt]
+\alpha^{\mathrm{rec}}_t, & target_t> IIS^{\mathrm{dyn}}_{t-1}.
+\end{cases}
+\]
+Это причинная схема: ухудшение проходит быстрее, восстановление медленнее.
+
+\section{Итог}
+В текущем проекте:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{V3} --- последняя гормонально-зависимая версия с коэффициентом \(K\);
+    \item \textbf{V4} --- базовая практическая direct-версия без гормонов;
+    \item \textbf{V5} --- нелинейная контрастная версия без гормонов;
+    \item \textbf{V6} --- универсальная gated-версия без гормонов.
+\end{itemize}
+
+Таким образом документ разделяет:
+\[
+\text{теорию модели}
+\;\longrightarrow\;
+\text{реальную direct-реализацию}
+\;\longrightarrow\;
+\text{proxy-реализацию при неполных данных}.
+\]
+
+\end{document}
