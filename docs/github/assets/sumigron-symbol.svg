@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="320" viewBox="0 0 420 320" role="img" aria-labelledby="title desc">
+  <title id="title">Sumigron symbol</title>
+  <desc id="desc">Composite Sumigron symbol with sigma-like frame, integral spine, and lower bowtie marker.</desc>
+  <rect width="100%" height="100%" fill="white"/>
+  <g stroke="#111" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 70 H230"/>
+    <path d="M60 250 H230"/>
+    <path d="M60 70 L180 160 L60 250"/>
+    <path d="M215 28 C155 28 145 58 145 95 V215 C145 258 118 290 72 290"/>
+    <path d="M145 120 L180 160 L145 200"/>
+  </g>
+  <g stroke="#111" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M170 262 L195 282 L170 302 Z"/>
+    <path d="M220 262 L195 282 L220 302 Z"/>
+  </g>
+</svg>

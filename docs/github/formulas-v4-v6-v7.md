@@ -15,7 +15,7 @@
 - $Q$ - интегральное качество состояния.
 - $\sigma(x)=\frac{1}{1+e^{-x}}$ - логистическая сигмоида.
 - $T(x;c,w)=\tanh\left(\frac{x-c}{w}\right)$ - мягкая центрированная нормировка.
-- $\phi_p(x)=\operatorname{sign}(x)\lvert x\rvert^p$ - знако-сохраняющая нелинейность.
+- $\phi_p(x)=\mathrm{sign}(x)\lvert x\rvert^p$ - знако-сохраняющая нелинейность.
 
 ## Базовые компоненты V4/V6
 
@@ -123,8 +123,8 @@ z^{(Q)}_{\mathrm{dep}}=-0.80\widehat{A}-0.95\widehat{V}+0.72\widehat{\Gamma}_+
 $$
 
 $$
-\bigl(g^{(Q)}_{\mathrm{reg}},g^{(Q)}_{\mathrm{mob}},g^{(Q)}_{\mathrm{dep}}\bigr)=
-\operatorname{softmax}\left(
+\left(g^{(Q)}_{\mathrm{reg}},g^{(Q)}_{\mathrm{mob}},g^{(Q)}_{\mathrm{dep}}\right)=
+\mathrm{softmax}\left(
 1.65z^{(Q)}_{\mathrm{reg}},
 1.65z^{(Q)}_{\mathrm{mob}},
 1.65z^{(Q)}_{\mathrm{dep}}
@@ -134,7 +134,7 @@ $$
 ### Локальные режимные уровни для Q_6
 
 $$
-S_{AV}^{(6)}=\operatorname{sign}(\widehat{A}+\widehat{V})\sqrt{\lvert\widehat{A}\widehat{V}\rvert+\varepsilon}
+S_{AV}^{(6)}=\mathrm{sign}(\widehat{A}+\widehat{V})\sqrt{\lvert\widehat{A}\widehat{V}\rvert+\varepsilon}
 $$
 
 $$
@@ -160,7 +160,7 @@ $$
 
 $$
 Q_6=
-\operatorname{clip}\left(
+\mathrm{clip}\left(
 g^{(Q)}_{\mathrm{reg}}q_{\mathrm{reg}}
 +g^{(Q)}_{\mathrm{mob}}q_{\mathrm{mob}}
 +g^{(Q)}_{\mathrm{dep}}q_{\mathrm{dep}},
@@ -183,8 +183,8 @@ z_{\mathrm{dep}}=-0.70\widehat{Q}-0.55\widehat{V}-0.20\widehat{A}+0.35\widehat{\
 $$
 
 $$
-\bigl(g_{\mathrm{reg}},g_{\mathrm{mob}},g_{\mathrm{dep}}\bigr)=
-\operatorname{softmax}\left(
+\left(g_{\mathrm{reg}},g_{\mathrm{mob}},g_{\mathrm{dep}}\right)=
+\mathrm{softmax}\left(
 1.65z_{\mathrm{reg}},
 1.65z_{\mathrm{mob}},
 1.65z_{\mathrm{dep}}
@@ -194,7 +194,7 @@ $$
 ### Локальные режимные оценки
 
 $$
-S_{QV}^{(6)}=\operatorname{sign}(\widehat{Q}+\widehat{V})\sqrt{\lvert\widehat{Q}\widehat{V}\rvert+\varepsilon}
+S_{QV}^{(6)}=\mathrm{sign}(\widehat{Q}+\widehat{V})\sqrt{\lvert\widehat{Q}\widehat{V}\rvert+\varepsilon}
 $$
 
 $$
@@ -242,7 +242,7 @@ $$
 
 $$
 IIS_6=
-\operatorname{clip}\left(
+\mathrm{clip}\left(
 R_6
 -0.08H(g)
 +0.05B_6
@@ -293,7 +293,7 @@ $$
 \sigma^{sg}_{i,c}=
 \sqrt{
 \sum_{t=1}^{L_i}\alpha_{i,c,t}
-\bigl(x_{i,c,t}-\mu^{sg}_{i,c}\bigr)^2
+\left(x_{i,c,t}-\mu^{sg}_{i,c}\right)^2
 }
 $$
 
@@ -360,8 +360,7 @@ $$
 ### Идея итогового индекса V7
 
 $$
-\bigl(g^{reg}_7,g^{mob}_7,g^{dep}_7\bigr)=
-\operatorname{softmax}(z^{reg}_7,z^{mob}_7,z^{dep}_7)
+\left(g^{reg}_7,g^{mob}_7,g^{dep}_7\right)=\mathrm{softmax}\left(z^{reg}_7,z^{mob}_7,z^{dep}_7\right)
 $$
 
 Итоговая архитектура:

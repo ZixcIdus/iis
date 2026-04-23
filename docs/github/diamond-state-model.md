@@ -66,9 +66,9 @@ c_I\\
 c_R
 \end{pmatrix},
 \qquad
-c_I=\operatorname{median}(I),
+c_I=\mathrm{median}(I),
 \qquad
-c_R=\operatorname{median}(R).
+c_R=\mathrm{median}(R).
 $$
 
 На практике вместо медианы можно использовать baseline-центр, если карта должна быть жёстко привязана к состоянию покоя.
@@ -320,11 +320,11 @@ $$
 Если $\omega_t < \tau_0$, точка относится к центральному состоянию. Если $\omega_t \ge \tau_0$, макрорежим определяется знаком трёх координат:
 
 $$
-\operatorname{sgn}(v_t)=
+\mathrm{sgn}(v_t)=
 \left(
-\operatorname{sgn}(v_{t,1}),
-\operatorname{sgn}(v_{t,2}),
-\operatorname{sgn}(v_{t,3})
+\mathrm{sgn}(v_{t,1}),
+\mathrm{sgn}(v_{t,2}),
+\mathrm{sgn}(v_{t,3})
 \right).
 $$
 
