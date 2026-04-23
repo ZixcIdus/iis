@@ -23,6 +23,8 @@
 - [Формулы V4, V6 и V7](docs/github/formulas-v4-v6-v7.md)
 - [Краткая сводка по валидации](docs/github/validation-summary.md)
 - [Карта репозитория](docs/github/repository-map.md)
+- [Diamond State Model](docs/github/diamond-state-model.md)
+- [IISVersion7 и оператор Sumigron](docs/github/v7-sumigron-extended.md)
 
 Исходные расширенные документы проекта:
 
